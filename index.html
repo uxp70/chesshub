@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>ChessHub — Play bots, friends & analyse</title>
+<meta name="description" content="Free chess: play rated bots, play friends online, analyse like chess.com. 100% static, GitHub Pages ready."/>
+<link rel="stylesheet" href="./styles.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">ChessHub</div>
+  <nav class="tabs">
+    <button id="tabPlay" class="tab active">Play</button>
+    <button id="tabAnalyse" class="tab">Analyse</button>
+    <button id="tabBots" class="tab">Bots</button>
+  </nav>
+  <div class="top-actions">
+    <button id="flipBtn" title="Flip board">Flip</button>
+    <button id="soundBtn" title="Sound" class="on">Sound</button>
+  </div>
+</header>
+<main class="layout">
+  <section class="board-col">
+    <div class="eval-wrap">
+      <div id="evalBar" class="evalbar"><div id="evalFill"></div><span id="evalNum">0.0</span></div>
+      <div class="board-frame">
+        <div id="board" class="board"></div>
+        <svg id="arrows" class="arrows" viewBox="0 0 8 8" preserveAspectRatio="none"></svg>
+        <div id="thinking" class="thinking hidden">...</div>
+      </div>
+    </div>
+    <div class="under-board">
+      <div id="status" class="status">White to move</div>
+      <div class="row">
+        <button id="newBtn">+ New</button>
+        <button id="undoBtn">Undo</button>
+        <button id="hintBtn">Hint</button>
+        <button id="resignBtn">Resign</button>
+      </div>
+    </div>
+  </section>
+  <aside class="side-col">
+    <div id="panelPlay" class="panel">
+      <h2>Play</h2>
+      <label class="lbl">Mode</label>
+      <div class="seg" id="modeSeg">
+        <button data-mode="bot" class="active">Bot</button>
+        <button data-mode="local">2 Players</button>
+        <button data-mode="online">Online</button>
+      </div>
+      <div id="botSetup">
+        <label class="lbl">Your colour</label>
+        <div class="seg" id="colorSeg">
+          <button data-color="w" class="active">White</button>
+          <button data-color="random">Random</button>
+          <button data-color="b">Black</button>
+        </div>
+        <label class="lbl">Choose bot <span class="muted">(rated)</span></label>
+        <div id="botList" class="botlist"></div>
+      </div>
+      <div id="onlineSetup" class="hidden">
+        <p class="muted">Peer-to-peer, no account. Host creates a code, friend joins with it.</p>
+        <div class="row">
+          <button id="hostBtn">Create game code</button>
+          <button id="copyCodeBtn" class="hidden">Copy</button>
+        </div>
+        <div id="myCode" class="code hidden"></div>
+        <div class="row">
+          <input id="joinCode" placeholder="Enter friend's code e.g. AB12CD" maxlength="12"/>
+          <button id="joinBtn">Join</button>
+        </div>
+        <div id="netStatus" class="muted"></div>
+        <div class="row">
+          <button id="leaveNetBtn" class="hidden">Disconnect</button>
+        </div>
+      </div>
+      <div class="moves-head">
+        <span>Moves</span>
+        <span id="accLine" class="muted"></span>
+      </div>
+      <ol id="moveList" class="moves"></ol>
+      <div class="row wrap">
+        <button id="analyseBtn">Analyse this game</button>
+        <button id="pgnBtn">Copy PGN</button>
+      </div>
+      <div id="resultCard" class="result hidden"></div>
+    </div>
+    <div id="panelAnalyse" class="panel hidden">
+      <h2>Analysis <span class="muted">like chess.com</span></h2>
+      <div class="row">
+        <button id="runReviewBtn" class="primary">Game Review</button>
+        <button id="stopReviewBtn" class="hidden">Stop</button>
+      </div>
+      <div id="reviewSummary" class="review-summary"></div>
+      <div class="row">
+        <button id="prevBtn">Prev</button>
+        <button id="nextBtn">Next</button>
+        <button id="firstBtn">First</button>
+        <button id="lastBtn">Last</button>
+        <label class="chk"><input type="checkbox" id="showBestChk" checked/> best line</label>
+      </div>
+      <div id="engineLine" class="engine-line muted">Engine ready.</div>
+      <div class="row wrap">
+        <input id="pgnIn" placeholder="Paste PGN here to load..."/>
+        <button id="loadPgnBtn">Load PGN</button>
+      </div>
+      <div class="row wrap">
+        <input id="fenIn" placeholder="Or paste FEN..."/>
+        <button id="loadFenBtn">Load FEN</button>
+      </div>
+    </div>
+    <div id="panelBots" class="panel hidden">
+      <h2>Bot ratings</h2>
+      <p class="muted">Elo calibrated to feel like Chess.com bots. All run 100% in your browser.</p>
+      <div id="botTable"></div>
+      <h3>How elo works here</h3>
+      <ul class="bullets">
+        <li><b>Depth:</b> 300-600 = 1 ply, 900-1200 = 2 ply, 1500-1850 = 3 ply + quiescence</li>
+        <li><b>Randomness:</b> higher at low elo</li>
+        <li><b>Blunders:</b> 25% random moves at 300 down to 2% at 1850</li>
+      </ul>
+    </div>
+  </aside>
+</main>
+<footer class="foot">
+  <span>Free & open source - Moves + analysis run locally</span>
+</footer>
+<script src="./app.js"></script>
+</body>
+</html>

@@ -152,7 +152,7 @@ function orderMoves(moves,ply,ttMove){
 
 function negamax(g,depth,alpha,beta,ply,useQ,deadline){
   nodes++;
-  if(deadline&&(nodes&1023)===0&&performance.now()>deadline)throw TIMEOUT;
+  if(deadline&&(nodes&63)===0&&performance.now()>deadline)throw TIMEOUT;
   const alpha0=alpha;
   const key=g.fen();
   const ent=TT.get(key);
@@ -197,7 +197,7 @@ function negamax(g,depth,alpha,beta,ply,useQ,deadline){
 
 function quiesce(g,alpha,beta,ply,d,deadline){
   nodes++;
-  if(deadline&&(nodes&1023)===0&&performance.now()>deadline)throw TIMEOUT;
+  if(deadline&&(nodes&63)===0&&performance.now()>deadline)throw TIMEOUT;
   const stand=evalSTM(g);
   if(stand>=beta)return beta;
   if(stand>alpha)alpha=stand;
@@ -576,9 +576,10 @@ async function runReview(){
   const g=new Chess();
   const classes=[],lines=[],evalsByPly=[],wAcc=[],bAcc=[];
   const counts={w:{},b:{}};
-  let cur=findBest(g.fen(),4,0,true,160);
+  let cur=findBest(g.fen(),4,0,true,120);
   lines[0]=cur;
   evalsByPly[0]=cur?cur.score:evaluate(g);
+  try{
   for(let i=0;i<sans.length;i++){
     if(!reviewing)break;
     const turn=g.turn();
@@ -587,7 +588,7 @@ async function runReview(){
     const cpBefore=typeof before.score==='number'?before.score:evaluate(g);
     const sac=sacrificeLikely(g,before.move,turn,cpBefore);
     const mv=g.move(sans[i]);
-    const next=findBest(g.fen(),4,0,true,130);
+    const next=findBest(g.fen(),4,0,true,110);
     lines[i+1]=next;
     const cpAfter=next?next.score:evaluate(g);
     evalsByPly[i+1]=cpAfter;
@@ -617,6 +618,10 @@ async function runReview(){
     $('reviewSummary').innerHTML=summaryHtml(average(wAcc),average(bAcc),counts,false,sans.length);
     cur=next;
     await new Promise(r=>setTimeout(r,0));
+  }
+  }catch(err){
+    console.error('review stopped',err);
+    $('engineLine').textContent='Analysis stopped: '+((err&&err.message)||err);
   }
   const used=classes.length;
   review={

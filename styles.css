@@ -44,6 +44,11 @@
 .tag.Brilliant{background:#1baaa9;color:#fff}.tag.Great{background:#5b8fd9;color:#fff}.tag.Best{background:#7fa650;color:#111}.tag.Excellent{background:#63924d;color:#fff}.tag.Good{background:#4d7a3a;color:#fff}.tag.Book{background:#8a6d3b;color:#fff}.tag.Inaccuracy{background:#e0a030;color:#111}.tag.Mistake{background:#e07020;color:#fff}.tag.Miss{background:#c04040;color:#fff}.tag.Blunder{background:#a02020;color:#fff}
 .result{margin-top:10px;padding:12px;border-radius:12px;background:#100f0e;border:1px solid var(--line)}
 .review-summary{display:grid;gap:8px;margin:8px 0}
+.tally{background:#100f0e;border:1px solid var(--line);border-radius:10px;padding:6px 8px;display:grid;gap:3px}
+.tally-row{display:grid;grid-template-columns:1fr 34px 34px;align-items:center;gap:6px;font-size:13px}
+.tally-row.head{color:var(--mut);font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+.tally-row b{text-align:center}
+.tally .tag{margin-left:0;justify-self:start}
 .accbox{display:flex;gap:10px}.accbox div{flex:1;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px;text-align:center}
 .engine-line{background:#100f0e;border:1px solid var(--line);border-radius:10px;padding:8px;min-height:44px}
 input{background:#100f0e;color:var(--txt);border:1px solid var(--line);border-radius:10px;padding:8px 10px;flex:1}

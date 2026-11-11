@@ -129,16 +129,17 @@
       <div id="botTable"></div>
       <h3>How elo works here</h3>
       <ul class="bullets">
-        <li><b>Depth:</b> 300–600 = 1 ply, 900–1200 = 2 ply, 1500–1850 = 3 ply + quiescence</li>
-        <li><b>Randomness:</b> higher at low elo (±250cp at 300, ±10cp at 1850)</li>
-        <li><b>Blunders:</b> 25% random moves at 300 → 2% at 1850</li>
+        <li><b>Depth:</b> 1 ply at 300–600, 2 at 900, 3 at 1200, 4 at 1500, 5 at 1850 (iterative deepening)</li>
+        <li><b>Randomness:</b> ±250cp at 300 falling to ±5cp at 1850</li>
+        <li><b>Blunders:</b> 26% random moves at 300 falling to 1% at 1850</li>
+        <li><b>Search:</b> alpha-beta with transposition table, killer moves, history heuristic and quiescence</li>
       </ul>
     </div>
   </aside>
 </main>
 
 <footer class="foot">
-  <span>Free & open source • Deployable to GitHub Pages • Moves + analysis run locally</span>
+  <span>Free & open source • Deployed on GitHub Pages • Moves + analysis run locally</span>
   <a href="./README.md">Deploy guide</a>
 </footer>
 

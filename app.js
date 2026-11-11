@@ -369,11 +369,10 @@ function renderMoves(){
   const cls=review?review.classes:[];
   for(let i=0;i<h.length;i+=2){
     const li=document.createElement('li');
-    let txt=(i/2+1)+'. '+h[i];
-    if(h[i+1])txt+=' '+h[i+1];
-    const a=cls[i]?'<span class="tag '+cls[i].label+'">'+cls[i].icon+'</span>':'';
-    const b=cls[i+1]?'<span class="tag '+cls[i+1].label+'">'+cls[i+1].icon+'</span>':'';
-    li.innerHTML=txt+' '+a+' '+b;
+    const tagFor=(j)=>{const c=cls[j];return c?' <span class="tag '+c.label+'">'+c.icon+'</span>':'';};
+    let html=(i/2+1)+'. '+h[i]+tagFor(i);
+    if(h[i+1])html+=' &nbsp;'+h[i+1]+tagFor(i+1);
+    li.innerHTML=html;
     if(reviewIdx===i||reviewIdx===i+1)li.classList.add('cur');
     li.onclick=()=>{ if(review){reviewIdx=Math.min(i+1,h.length-1);jumpToPly(reviewIdx+1);} };
     moveListEl.appendChild(li);
@@ -543,7 +542,8 @@ function classifyMove(o){
   if(o.drop>=2)return {label:'Good',icon:'·'};
   return {label:'Excellent',icon:'✓'};
 }
-const CLS_ORDER=['Brilliant','Great','Best','Excellent','Good','Inaccuracy','Mistake','Miss','Blunder'];
+const CLS_ORDER=['Brilliant','Great','Best','Excellent','Good','Book','Inaccuracy','Mistake','Miss','Blunder'];
+const BOOK_SANS={e4:1,d4:1,Nf3:1,c4:1,g3:1,b3:1,e5:1,c5:1,e6:1,c6:1,d5:1,Nf6:1,Nc6:1,d6:1,g6:1,b6:1,a6:1,h6:1,Be7:1,Bb4:1,Bc5:1,Nd7:1,Be6:1,Bg7:1,'O-O':1,'O-O-O':1};
 
 function summaryHtml(accW,accB,counts,done,total){
   let tally='<div class="tally"><div class="tally-row head"><span>Move</span><b>W</b><b>B</b></div>';
@@ -594,20 +594,28 @@ async function runReview(){
     const winBefore=winPctFor(cpBefore,turn);
     const winAfter=winPctFor(cpAfter,turn);
     const drop=Math.max(0,winBefore-winAfter);
-    const cls=classifyMove({
-      isBest:!!(before.move&&mv&&sameMove(before.move,mv)),
-      isOnly:legalBefore===1,
-      sac:sac,
-      winBefore:winBefore,winAfter:winAfter,drop:drop
-    });
-    classes.push(cls);
-    const acc=accFromDrop(drop);
-    if(turn==='w')wAcc.push(acc); else bAcc.push(acc);
     const side=turn==='w'?'w':'b';
+    const book=i<8&&BOOK_SANS[sans[i].replace(/[+#]/g,'')];
+    let cls,acc=null;
+    if(book){
+      cls={label:'Book',icon:'📖'};
+    }else{
+      cls=classifyMove({
+        isBest:!!(before.move&&mv&&sameMove(before.move,mv)),
+        isOnly:legalBefore===1,
+        sac:sac,
+        winBefore:winBefore,winAfter:winAfter,drop:drop
+      });
+      acc=accFromDrop(drop);
+      if(turn==='w')wAcc.push(acc); else bAcc.push(acc);
+    }
+    classes.push(cls);
     counts[side][cls.label]=(counts[side][cls.label]||0)+1;
     $('engineLine').textContent='Move '+(i+1)+'/'+sans.length+': '+sans[i]+' → '+cls.label+
-      ' ('+acc.toFixed(0)+' accuracy)'+(next&&next.pv&&next.pv.length?' · best line: '+next.pv.join(' '):'');
+      (acc===null?'':' ('+acc.toFixed(0)+' accuracy)')+
+      (next&&next.pv&&next.pv.length?' · best line: '+next.pv.join(' '):'');
     $('reviewSummary').innerHTML=summaryHtml(average(wAcc),average(bAcc),counts,false,sans.length);
+    cur=next;
     await new Promise(r=>setTimeout(r,0));
   }
   const used=classes.length;

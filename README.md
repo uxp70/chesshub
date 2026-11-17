@@ -5,7 +5,7 @@
 Features:
 - 🤖 6 rated bots (300 → 1850), all running locally: **Sprout, Pixel, Mira, Jonah, Zara, Odin**.
 - 👥 Local two-player and 🌐 online friend play through PeerJS (free WebRTC, no account: host creates a six-letter code, friend joins).
-- 🔍 chess.com-style **Game Review**: eval bar, best-move arrow, principal variation, move classifications (Brilliant / Great / Best / Excellent / Good / Inaccuracy / Mistake / Miss / Blunder), tallies per side, per-move accuracy and white/black averages. Keyboard navigation, PGN/FEN import, hint engine.
+- 🔍 chess.com-style **Game Review**: eval bar, best-move arrow, principal variation, move classifications (Brilliant / Great / Best / Excellent / Good / Inaccuracy / Mistake / Miss / Blunder), tallies per side, per-move accuracy and white/black averages. Keyboard navigation, PGN/FEN import, hint engine. Review and hints are powered by **Stockfish 10** running in a Web Worker; if it cannot start, the built-in engine takes over automatically.
 
 ## Run locally
 
@@ -45,6 +45,22 @@ Bots use the same engine as the analyser, with a time budget and an elo-appropri
 - **Accuracy:** centipawn eval → win probability (`100 / (1 + e^(-0.0038·cp))`), win-probability loss per move, then `103.1668·e^(-0.04354·Δ) − 3.1669` clamped to 0–100.
 - Classification is based on win-probability drop, with Brilliant reserved for sound sacrifices that are also the best move and Great for a forced only-move.
 
+## Stockfish
+
+Stockfish 10 is loaded from cdnjs: the single-threaded asm.js build compiled by
+[niklasf/stockfish.js](https://github.com/niklasf/stockfish.js) (GPLv3). A Worker cannot be created
+directly from another origin, so the page wraps the CDN script in a same-origin blob worker
+(`importScripts(...)`) and drives it with UCI over `postMessage`.
+
+- Single-threaded on purpose. GitHub Pages cannot send `Cross-Origin-Opener-Policy` /
+  `Cross-Origin-Embedder-Policy`, so the `SharedArrayBuffer` (multi-threaded) builds would never load.
+- Used by **Game Review** (2.5 s per position, up to depth 24), the per-move evals, the best-move
+  arrow, the principal variation and **💡 Hint** (8 s, up to depth 30). A 40-move game takes a couple
+  of minutes; **⏹ Stop** interrupts immediately.
+- The six rated bots and the instant eval bar keep using the built-in engine, so playing stays snappy.
+- If the worker is blocked or fails to start, every feature falls back to the built-in search and the
+  Analyse panel says so.
+
 ## Online play
 
 GitHub Pages cannot run a game server, so friend games use PeerJS cloud signalling for a peer-to-peer WebRTC link. Moves sync directly between the two browsers. Bot play and analysis need no network after the page and its two CDN scripts have loaded.
@@ -53,6 +69,7 @@ GitHub Pages cannot run a game server, so friend games use PeerJS cloud signalli
 
 - chess.js 0.10.3 (CDN) for rules
 - PeerJS 1.5.4 (CDN) for online play
-- Vanilla JS and CSS for the board, engine and analysis
+- Stockfish 10 (asm.js, GPLv3, loaded from cdnjs) for analysis
+- Vanilla JS and CSS for the board, bots and analysis
 
 No tracking, no backend, no API keys.

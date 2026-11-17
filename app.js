@@ -278,6 +278,151 @@ function findBest(fen,depth,randJitter,useQ,timeMs){
   return {move:best,score:rootTurn==='w'?lastScore:-lastScore,ranked:bestRanked,pv:extractPV(fen,4),depth:lastDepth};
 }
 
+/* ------------------------------------------------------------------ *
+ *  Stockfish — real engine in a Web Worker
+ * ------------------------------------------------------------------ */
+/* `stockfish.js` is the single-threaded Stockfish 10 asm.js build compiled
+   by niklasf/stockfish.js (GPLv3). Single-threaded on purpose: GitHub Pages
+   cannot send COOP/COEP headers, so the SharedArrayBuffer builds would not
+   load. If the worker cannot start, the built-in engine above takes over. */
+const SF={worker:null,ready:false,dead:false,started:false,name:'Stockfish 10',cur:null,chain:Promise.resolve()};
+
+function sfStatus(msg){const el=$('sfStatus');if(el)el.textContent=msg;}
+function sfSend(cmd){if(!SF.worker)return;try{SF.worker.postMessage(cmd);}catch(e){}}
+
+const SF_SRC='https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js';
+function sfStart(){
+  if(SF.started)return;
+  SF.started=true;
+  sfStatus('Stockfish · loading…');
+  try{
+    /* A Worker cannot be created straight from another origin, so the CDN
+       build is pulled into a same-origin blob worker. */
+    const glue='importScripts('+JSON.stringify(SF_SRC)+');';
+    SF.worker=new Worker(URL.createObjectURL(new Blob([glue],{type:'text/javascript'})));
+  }
+  catch(e){SF.dead=true;sfStatus('Stockfish blocked — using the built-in engine.');return;}
+  SF.worker.onmessage=e=>sfLine(String(e.data==null?'':e.data));
+  SF.worker.onerror=e=>{
+    SF.dead=true;SF.cur=null;
+    sfStatus('Stockfish failed to load ('+((e&&e.message)||'worker error')+') — using the built-in engine.');
+  };
+  sfSend('uci');
+}
+
+function sfLine(raw){
+  const line=raw.trim();
+  if(!line)return;
+  if(line.indexOf('id name ')===0){SF.name=line.slice(8).trim();return;}
+  if(line==='uciok'){
+    sfSend('setoption name Hash value 32');
+    sfSend('setoption name UCI_AnalyseMode value true');
+    sfSend('isready');
+    return;
+  }
+  if(line==='readyok'){
+    if(!SF.ready){SF.ready=true;sfStatus('Stockfish ready · '+SF.name+' · single-threaded');}
+    return;
+  }
+  if(line.indexOf('bestmove')===0){sfDone(line.split(/\s+/)[1]||'');return;}
+  const job=SF.cur;
+  if(!job||line.indexOf('info ')!==0)return;
+  const d=line.match(/ depth (\d+)/);
+  if(d)job.depth=+d[1];
+  const s=line.match(/ score (cp|mate) (-?\d+)/);
+  if(s){if(s[1]==='cp'){job.cp=+s[2];job.mate=null;}else{job.mate=+s[2];job.cp=null;}}
+  const p=line.match(/ pv (.+)$/);
+  if(p)job.pvUci=p[1].trim().split(/\s+/);
+}
+
+function uciSquare(u){
+  if(!u||u==='(none)'||u.length<4)return null;
+  return {from:u.slice(0,2),to:u.slice(2,4),promotion:u.length>4?u[4]:undefined};
+}
+function mateToCp(m){const a=Math.min(50,Math.abs(m));return m>0?10000-a*10:-(10000-a*10);}
+/* UCI scores are from the side-to-move's point of view; everything else in
+   this file (eval bar, review, arrows) wants White's point of view. */
+function sfResult(job,bestUci){
+  const start=new Chess(job.fen);
+  const turn=start.turn();
+  const replay=new Chess(job.fen);
+  const pv=[];
+  for(const u of (job.pvUci||[])){
+    const m=uciSquare(u);
+    if(!m)break;
+    let mv=null;
+    try{mv=replay.move({from:m.from,to:m.to,promotion:m.promotion});}catch(e){mv=null;}
+    if(!mv)break;
+    pv.push(mv.san);
+  }
+  const sign=turn==='w'?1:-1;
+  const cp=(job.mate!==null&&job.mate!==undefined)?mateToCp(job.mate)*sign
+    :(job.cp==null?evaluate(start):job.cp*sign);
+  return {
+    move:uciSquare(bestUci),
+    score:cp,
+    mate:(job.mate===null||job.mate===undefined)?null:job.mate*sign,
+    pv:pv,depth:job.depth||0,engine:'stockfish'
+  };
+}
+
+function sfDone(bestUci){
+  const job=SF.cur;
+  if(!job)return;
+  SF.cur=null;
+  clearTimeout(job.timer);clearTimeout(job.guard);
+  const out=job.aborted?{aborted:true}:sfResult(job,bestUci);
+  if(out&&out.depth)sfStatus('Stockfish ready · '+SF.name+' · depth '+out.depth);
+  job.done(out);
+}
+
+/* One search at a time: requests are chained so a hint cannot interleave
+   with the position the review is currently analysing. */
+function sfGo(fen,opt){
+  opt=opt||{};
+  const ms=opt.movetime||300;
+  const run=()=>new Promise(resolve=>{
+    if(SF.dead||!SF.ready){resolve(null);return;}
+    const job={fen:fen,cp:null,mate:null,pvUci:[],depth:0,aborted:false,done:resolve,timer:0,guard:0};
+    SF.cur=job;
+    job.timer=setTimeout(()=>{if(SF.cur===job)sfSend('stop');},ms+8000);
+    job.guard=setTimeout(()=>{if(SF.cur===job)sfDone('');},ms+14000);
+    sfSend('position fen '+fen);
+    sfSend('go '+(opt.depth?'depth '+opt.depth+' ':'')+'movetime '+ms);
+  });
+  const p=SF.chain.then(run,run);
+  SF.chain=p.then(()=>null,()=>null);
+  return p;
+}
+function sfAbort(){const job=SF.cur;if(!job)return;job.aborted=true;sfSend('stop');}
+function sfWaitReady(ms){
+  return new Promise(resolve=>{
+    const t0=performance.now();
+    (function poll(){
+      if(SF.ready)return resolve(true);
+      if(SF.dead)return resolve(false);
+      if(performance.now()-t0>=ms)return resolve(false);
+      setTimeout(poll,60);
+    })();
+  });
+}
+
+/* Best move for a position: Stockfish when available, otherwise the
+   built-in iterative-deepening search. Same shape either way. */
+async function engineBest(g,opt){
+  opt=opt||{};
+  if(!SF.started)sfStart();
+  if(!SF.dead&&!SF.ready)await sfWaitReady(opt.wait||15000);
+  if(SF.ready){
+    const r=await sfGo(g.fen(),{movetime:opt.movetime||300,depth:opt.depth});
+    if(r&&r.aborted)return null;
+    if(r&&r.move&&r.move.from)return r;
+  }
+  const local=findBest(g.fen(),4,0,true,opt.localMs||150);
+  if(local)local.engine='local';
+  return local;
+}
+
 /* --------------------------- move sounds --------------------------- */
 function beep(freq,dur,type){
   if(!soundOn)return;
@@ -571,12 +716,12 @@ async function runReview(){
   reviewing=true;
   $('runReviewBtn').disabled=true;
   $('stopReviewBtn').classList.remove('hidden');
-  $('reviewSummary').innerHTML='<div class="muted">Analysing '+sans.length+' moves with the local engine…</div>';
+  $('reviewSummary').innerHTML='<div class="muted">Analysing '+sans.length+' moves…</div>';
   $('engineLine').textContent='Thinking…';
   const g=new Chess();
   const classes=[],lines=[],evalsByPly=[],wAcc=[],bAcc=[];
   const counts={w:{},b:{}};
-  let cur=findBest(g.fen(),4,0,true,120);
+  let cur=await engineBest(g,{movetime:2500,depth:24,localMs:300});
   lines[0]=cur;
   evalsByPly[0]=cur?cur.score:evaluate(g);
   try{
@@ -588,9 +733,9 @@ async function runReview(){
     const cpBefore=typeof before.score==='number'?before.score:evaluate(g);
     const sac=sacrificeLikely(g,before.move,turn,cpBefore);
     const mv=g.move(sans[i]);
-    const next=findBest(g.fen(),4,0,true,110);
+    const next=await engineBest(g,{movetime:2500,depth:24,localMs:300});
     lines[i+1]=next;
-    const cpAfter=next?next.score:evaluate(g);
+    const cpAfter=next&&typeof next.score==='number'?next.score:evaluate(g);
     evalsByPly[i+1]=cpAfter;
     const winBefore=winPctFor(cpBefore,turn);
     const winAfter=winPctFor(cpAfter,turn);
@@ -614,6 +759,7 @@ async function runReview(){
     counts[side][cls.label]=(counts[side][cls.label]||0)+1;
     $('engineLine').textContent='Move '+(i+1)+'/'+sans.length+': '+sans[i]+' → '+cls.label+
       (acc===null?'':' ('+acc.toFixed(0)+' accuracy)')+
+      (next&&next.engine==='stockfish'&&next.depth?' · '+SF.name+' d'+next.depth:'')+
       (next&&next.pv&&next.pv.length?' · best line: '+next.pv.join(' '):'');
     $('reviewSummary').innerHTML=summaryHtml(average(wAcc),average(bAcc),counts,false,sans.length);
     cur=next;
@@ -633,10 +779,12 @@ async function runReview(){
   reviewing=false;
   $('runReviewBtn').disabled=false;
   $('stopReviewBtn').classList.add('hidden');
-  $('reviewSummary').innerHTML=summaryHtml(average(wAcc),average(bAcc),counts,true,used);
-  $('accLine').textContent=(average(wAcc)===null?'':'W '+average(wAcc).toFixed(1)+' · B '+average(bAcc).toFixed(1));
+  const aw=average(wAcc),ab=average(bAcc);
+  $('reviewSummary').innerHTML=summaryHtml(aw,ab,counts,true,used);
+  $('accLine').textContent=(aw===null&&ab===null)?''
+    :('W '+(aw===null?'–':aw.toFixed(1))+' · B '+(ab===null?'–':ab.toFixed(1)));
   $('engineLine').textContent='Review complete'+(used<sans.length?' (stopped early)':'')+
-    ' · step with the arrows · green arrow = best move';
+    ' · engine: '+(SF.ready?SF.name:'built-in')+' · step with the arrows · green arrow = best move';
   render();
 }
 
@@ -701,7 +849,10 @@ function updateEngineLine(){
     return;
   }
   const cp=typeof line.score==='number'?line.score:0;
-  let txt='Eval '+(cp>=0?'+':'')+(cp/100).toFixed(2)+' (White)';
+  let txt;
+  if(typeof line.mate==='number')txt='Mate in '+Math.abs(line.mate)+' — '+(line.mate>0?'White':'Black')+' mates';
+  else txt='Eval '+(cp>=0?'+':'')+(cp/100).toFixed(2)+' (White)';
+  if(line.engine)txt+=' · '+SF.name+(line.depth?' d'+line.depth:'');
   if(line.pv&&line.pv.length)txt+=' · best: '+line.pv[0]+' · line: '+line.pv.join(' ');
   $('engineLine').textContent=txt;
 }
@@ -716,6 +867,7 @@ function kingSquareTmp(t,color){
 
 /* --------------------------- tabs & setup -------------------------- */
 function switchTab(which){
+  if(which==='Analyse')sfStart();
   for(const t of ['Play','Analyse','Bots'])$('tab'+t).classList.toggle('active',t===which);
   $('panelPlay').classList.toggle('hidden',which!=='Play');
   $('panelAnalyse').classList.toggle('hidden',which!=='Analyse');
@@ -839,17 +991,20 @@ $('resignBtn').onclick=()=>{
 };
 $('hintBtn').onclick=()=>{
   thinkingEl.classList.remove('hidden');
-  $('engineLine').textContent='Hint: thinking (iterative deepening)…';
-  setTimeout(()=>{
-    const r=findBest(game.fen(),4,0,true,220);
+  $('engineLine').textContent='Hint: thinking…';
+  setTimeout(async()=>{
+    const r=await engineBest(game,{movetime:8000,depth:30,localMs:600});
     thinkingEl.classList.add('hidden');
-    if(!r)return;
+    if(!r||!r.move)return;
     selected=r.move.from;
     legalCache=[r.move];
     render();
     const cp=r.score;
+    const evalTxt=typeof r.mate==='number'?'mate in '+Math.abs(r.mate)
+      :((cp>=0?'+':'')+(cp/100).toFixed(2));
     $('engineLine').textContent='Hint: '+r.move.from+' → '+r.move.to+
-      ' (eval '+(cp>=0?'+':'')+(cp/100).toFixed(2)+')'+
+      ' (eval '+evalTxt+')'+
+      (r.engine==='stockfish'?' · '+SF.name+(r.depth?' d'+r.depth:''):'')+
       (r.pv&&r.pv.length?' · line: '+r.pv.join(' '):'');
     if($('panelAnalyse').classList.contains('hidden'))switchTab('Analyse');
     render();
@@ -857,7 +1012,7 @@ $('hintBtn').onclick=()=>{
 };
 $('analyseBtn').onclick=()=>{switchTab('Analyse');runReview();};
 $('runReviewBtn').onclick=runReview;
-$('stopReviewBtn').onclick=()=>{reviewing=false;};
+$('stopReviewBtn').onclick=()=>{reviewing=false;sfAbort();};
 $('showBestChk').onchange=e=>{showBest=e.target.checked;render();};
 $('prevBtn').onclick=()=>{if(review)jumpToPly(review.pos);};
 $('nextBtn').onclick=()=>{if(review)jumpToPly(review.pos+2);};

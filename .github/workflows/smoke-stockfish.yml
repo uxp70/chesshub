@@ -76,6 +76,15 @@ jobs:
               log('REVIEW_TAGS '+await page.evaluate(()=>Array.from(document.querySelectorAll('#moveList .tag')).map(e=>e.className).join('|')));
               log('GRAPH '+await page.evaluate(()=>!!document.querySelector('#sfGraph svg')));
               log('ACC '+(await page.textContent('#accLine')));
+              await page.fill('#pgnIn','1. f3 e5 2. g4 Qh4#');
+              await page.click('#loadPgnBtn');
+              await page.waitForFunction(()=>document.querySelectorAll('#moveList li').length>0,{timeout:10000}).catch(()=>{});
+              await page.click('#runReviewBtn');
+              await page.waitForFunction(()=>document.querySelectorAll('#moveList .tag').length>=4 && !document.getElementById('runReviewBtn').disabled,{timeout:60000}).catch(()=>{});
+              log('PGN_SUMMARY '+(await page.textContent('#reviewSummary')));
+              log('PGN_TAGS '+await page.evaluate(()=>Array.from(document.querySelectorAll('#moveList .tag')).map(e=>e.className).join('|')));
+              log('PGN_ACC '+(await page.textContent('#accLine')));
+              log('PGN_GRAPH '+await page.evaluate(()=>!!document.querySelector('#sfGraph svg')));
               log('ERRORS '+JSON.stringify(errors));
             }catch(e){log('FAIL '+String((e&&e.stack)||e));}
             finally{if(browser){try{await browser.close();}catch(e){}}}

@@ -1,0 +1,36 @@
+name: Fetch Stockfish engine
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Download Stockfish 19 lite single
+        run: |
+          mkdir -p stockfish
+          if [ ! -s stockfish/stockfish-19-lite-single.wasm ]; then
+            curl -L --fail --retry 3 -o stockfish/stockfish-19-lite-single.js https://github.com/nmrugg/stockfish.js/releases/download/v19.0.1/stockfish-19-lite-single.js
+            curl -L --fail --retry 3 -o stockfish/stockfish-19-lite-single.wasm https://github.com/nmrugg/stockfish.js/releases/download/v19.0.1/stockfish-19-lite-single.wasm
+          fi
+          ls -lh stockfish
+      - name: Syntax check
+        run: |
+          if node --check stockfish-preload.js > stockfish/syntax.txt 2>&1 && node --check sf-core.js >> stockfish/syntax.txt 2>&1 && node --check sf-review.js >> stockfish/syntax.txt 2>&1; then
+            echo OK >> stockfish/syntax.txt
+          fi
+          cat stockfish/syntax.txt
+      - name: Commit engine and report
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add stockfish
+          if git diff --cached --quiet; then echo 'nothing to commit'; exit 0; fi
+          git commit -m 'Add Stockfish 19 lite engine and syntax report [skip ci]'
+          git push

@@ -1,0 +1,100 @@
+name: Smoke test Stockfish
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'sf-core.js'
+      - 'sf-review.js'
+      - 'stockfish-preload.js'
+      - 'index.html'
+      - '.github/workflows/smoke-stockfish.yml'
+permissions:
+  contents: write
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install Playwright
+        run: |
+          mkdir -p /tmp/smoke
+          cd /tmp/smoke
+          npm init -y >/dev/null 2>&1
+          npm i playwright@1.47.2 >/dev/null 2>&1
+          npx playwright install --with-deps chromium
+      - name: Serve site
+        run: |
+          python3 -m http.server 8000 --directory "$GITHUB_WORKSPACE" >/tmp/server.log 2>&1 &
+          sleep 1
+          curl -sI http://127.0.0.1:8000/ | head -n 1
+      - name: Run smoke
+        run: |
+          cat > /tmp/smoke/run.js <<'JS'
+          const fs=require('fs');
+          const {chromium}=require('playwright');
+          (async()=>{
+            const out=[];
+            const log=(s)=>{out.push(String(s));console.log(String(s));};
+            let browser=null;
+            try{
+              browser=await chromium.launch({args:['--no-sandbox']});
+              const page=await browser.newPage();
+              const errors=[];
+              page.on('pageerror',e=>errors.push('pageerror: '+e.message));
+              page.on('console',m=>{if(m.type()==='error')errors.push('console: '+m.text());});
+              await page.goto('http://127.0.0.1:8000/',{waitUntil:'load',timeout:30000});
+              await page.waitForFunction(()=>!!window.SF,{timeout:10000});
+              log('SF_PRESENT');
+              const eng=await page.evaluate(async()=>{
+                try{
+                  await SF.startEngine();
+                  const r=await SF.search('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1','depth 10 movetime 400');
+                  return {ok:true,best:r.best,depth:r.depth,cp:r.cp};
+                }catch(e){return {ok:false,err:String((e&&e.message)||e)};}
+              });
+              log('ENGINE '+JSON.stringify(eng));
+              await page.click('#hintBtn');
+              await page.waitForFunction(()=>/Stockfish depth/.test((document.getElementById('engineLine')||{}).textContent||''),{timeout:20000}).catch(()=>{});
+              log('HINT '+(await page.textContent('#engineLine')));
+              await page.locator('#board .sq').nth(52).click();
+              await page.locator('#board .sq').nth(36).click();
+              await page.waitForFunction(()=>{
+                const t=(document.getElementById('moveList')||{}).textContent||'';
+                const re=/^(?:[KQRBN][a-h]?[1-8]?x?[a-h][1-8]|[a-h](?:x[a-h])?[1-8](?:=[QRBN])?|O-O(?:-O)?)[+#]?$/;
+                return t.replace(/[0-9]+\./g,' ').split(/\s+/).filter(x=>re.test(x)).length>=2;
+              },{timeout:20000}).catch(()=>{});
+              log('MOVES '+(await page.textContent('#moveList')));
+              log('THINKING_HIDDEN '+await page.evaluate(()=>{const e=document.getElementById('thinking');return e?e.classList.contains('hidden'):'missing';}));
+              await page.click('#tabAnalyse');
+              await page.click('#runReviewBtn');
+              await page.waitForFunction(()=>document.querySelectorAll('#moveList .tag').length>=2 && !document.getElementById('runReviewBtn').disabled,{timeout:60000}).catch(()=>{});
+              log('REVIEW_SUMMARY '+(await page.textContent('#reviewSummary')));
+              log('REVIEW_TAGS '+await page.evaluate(()=>Array.from(document.querySelectorAll('#moveList .tag')).map(e=>e.className).join('|')));
+              log('GRAPH '+await page.evaluate(()=>!!document.querySelector('#sfGraph svg')));
+              log('ACC '+(await page.textContent('#accLine')));
+              log('ERRORS '+JSON.stringify(errors));
+            }catch(e){log('FAIL '+String((e&&e.stack)||e));}
+            finally{if(browser){try{await browser.close();}catch(e){}}}
+            fs.writeFileSync('/tmp/smoke/smoke.out',out.join('\n')+'\n');
+            process.exit(0);
+          })();
+          JS
+          cd /tmp/smoke
+          node run.js || true
+          cat smoke.out || true
+          mkdir -p "$GITHUB_WORKSPACE/stockfish"
+          cp smoke.out "$GITHUB_WORKSPACE/stockfish/smoke.txt" 2>/dev/null || echo 'no report' > "$GITHUB_WORKSPACE/stockfish/smoke.txt"
+      - name: Commit report
+        if: always()
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add stockfish/smoke.txt
+          if git diff --cached --quiet; then echo 'nothing to commit'; exit 0; fi
+          git commit -m 'Update Stockfish smoke report [skip ci]'
+          git push

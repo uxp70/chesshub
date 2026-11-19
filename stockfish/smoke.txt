@@ -1,0 +1,10 @@
+SF_PRESENT
+ENGINE {"ok":true,"best":"e2e4","depth":10,"cp":31}
+HINT Stockfish depth 24 · best e4 (+0.31) · line e4 e5
+MOVES 1. e4  c5
+THINKING_HIDDEN true
+REVIEW_SUMMARY –White accuracy–Black accuracy2moves ratedMoveWBBook11
+REVIEW_TAGS tag Book|tag Book
+GRAPH true
+ACC W – · B –
+ERRORS []

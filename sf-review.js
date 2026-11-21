@@ -232,6 +232,13 @@ function hideProgress(){
   var bar=$('reviewBar');
   if(bar){bar.classList.add('hidden');}
 }
+/* The review bar sits directly under the board (pinned to the bottom of the
+   screen on phones) so stepping never needs a scroll. */
+function showBoardNav(on){
+  var bar=$('boardNav');
+  if(bar){bar.classList.toggle('hidden',!on);}
+  if(document.body){document.body.classList.toggle('reviewnav',!!on);}
+}
 function jumpMistake(dir){
   if(!review){return;}
   var i;
@@ -279,6 +286,13 @@ function renderReviewAt(p){
   SF.drawArrow(line?line.best:null,false);
   renderMoveList();
   renderGraph();
+  var lbl=$('bMove');
+  if(lbl){
+    lbl.textContent=p?('move '+p+'/'+review.classes.length):('start · '+review.classes.length+' moves');
+    lbl.style.color=p?(CLASS_COLORS[review.classes[p-1]]||''):'';
+    lbl.title=p?('Move '+p+' of '+review.classes.length+' — '+(review.classes[p-1]||'')):'Start of the game';
+  }
+  showBoardNav(true);
   var lineEl=$('engineLine');
   if(lineEl){lineEl.textContent=line?('Stockfish depth '+(line.depth||'?')+' · eval '+SF.evalText({cp:line.cp,mate:line.mate},line.turn)+' · best '+(line.bestSan||'—')+(line.pvSan?' · '+line.pvSan:'')):'No engine data.';}
 }
@@ -324,6 +338,7 @@ function abortUI(){
   busy=false;
   runSeq++;
   hideProgress();
+  showBoardNav(!!review);
   SF.setRunning(false);
   var runBtn=$('runReviewBtn'),stopBtn=$('stopReviewBtn'),t=$('engineLine');
   if(runBtn){runBtn.disabled=false;}
@@ -342,6 +357,7 @@ function runDeepReview(){
   SF.setReviewShown(false);
   stopFlag=false;
   review=null;
+  showBoardNav(false);
   var runBtn=$('runReviewBtn'),stopBtn=$('stopReviewBtn'),sum=$('reviewSummary'),lineEl=$('engineLine');
   if(runBtn){runBtn.disabled=true;}
   if(stopBtn){stopBtn.classList.remove('hidden');}
@@ -451,6 +467,10 @@ function init(){
   nav('lastBtn',function(){if(review){renderReviewAt(review.classes.length);}});
   nav('prevMistBtn',function(){jumpMistake(-1);});
   nav('nextMistBtn',function(){jumpMistake(1);});
+  nav('bPrev',function(){if(review){renderReviewAt(review.p-1);}});
+  nav('bNext',function(){if(review){renderReviewAt(review.p+1);}});
+  nav('bPrevMist',function(){jumpMistake(-1);});
+  nav('bNextMist',function(){jumpMistake(1);});
   var chk=$('showBestChk');
   if(chk){chk.onchange=null;chk.addEventListener('change',function(){if(review){var l=review.lines[review.p];SF.drawArrow(l?l.best:null,false);}});}
   document.addEventListener('keydown',function(e){
@@ -469,7 +489,7 @@ function init(){
     var mo=new MutationObserver(function(){var b=$('reviewNowBtn');if(b&&!b.__sf){b.__sf=true;b.onclick=function(){var t=$('tabAnalyse');if(t){t.click();}runDeepReview();};}});
     mo.observe(rc,{childList:true,subtree:true});
   }
-  document.addEventListener('sf-newgame',function(){review=null;stopFlag=true;if(SF.stop){SF.stop();}});
+  document.addEventListener('sf-newgame',function(){review=null;stopFlag=true;showBoardNav(false);if(SF.stop){SF.stop();}});
 }
 init();
 })();

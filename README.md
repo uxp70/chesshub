@@ -54,9 +54,13 @@ directly from another origin, so the page wraps the CDN script in a same-origin 
 
 - Single-threaded on purpose. GitHub Pages cannot send `Cross-Origin-Opener-Policy` /
   `Cross-Origin-Embedder-Policy`, so the `SharedArrayBuffer` (multi-threaded) builds would never load.
-- Used by **Game Review** (2.5 s per position, up to depth 24), the per-move evals, the best-move
-  arrow, the principal variation and **💡 Hint** (8 s, up to depth 30). A 40-move game takes a couple
-  of minutes; **⏹ Stop** interrupts immediately.
+- **Game Review** has a speed selector in the Analyse panel: ⚡ **Fast** (~0.4 s/move, depth 16),
+  ⚖ **Balanced** (~1.2 s/move, depth 20, the default) and 🔍 **Deep** (~2.5 s/move, depth 24).
+  A 40-move game takes roughly 15 s, a minute, or two minutes respectively, and the setting applies
+  from the next position if changed mid-review. It also powers the per-move evals, the best-move
+  arrow and the principal variation.
+- **💡 Hint** is a single search at 8 s (depth cap 30), independent of the review speed.
+- **⏹ Stop** aborts immediately, including while the engine is still loading.
 - The six rated bots and the instant eval bar keep using the built-in engine, so playing stays snappy.
 - If the worker is blocked or fails to start, every feature falls back to the built-in search and the
   Analyse panel says so.

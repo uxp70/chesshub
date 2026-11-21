@@ -1,138 +1,155 @@
 <!doctype html>
-<html lang='en'>
+<html lang="en">
 <head>
-<meta charset='utf-8'/>
-<meta name='viewport' content='width=device-width,initial-scale=1'/>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>ChessHub — Play bots, friends & analyse</title>
-<meta name='description' content='Free chess: play Stockfish-powered bots, play friends online, and analyse every move like chess.com.'/>
-<link rel='stylesheet' href='./styles.css'/>
-<script src='https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js'></script>
-<script src='https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js'></script>
+<meta name="description" content="Free chess: play rated bots, play friends online, analyse like chess.com. 100% static, GitHub Pages ready."/>
+<link rel="stylesheet" href="./styles.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 </head>
 <body>
-<header class='topbar'>
-  <div class='brand'>♞ ChessHub</div>
-  <nav class='tabs'>
-    <button id='tabPlay' class='tab active'>Play</button>
-    <button id='tabAnalyse' class='tab'>Analyse</button>
-    <button id='tabBots' class='tab'>Bots</button>
+<header class="topbar">
+  <div class="brand">♞ ChessHub</div>
+  <nav class="tabs">
+    <button id="tabPlay" class="tab active">Play</button>
+    <button id="tabAnalyse" class="tab">Analyse</button>
+    <button id="tabBots" class="tab">Bots</button>
   </nav>
-  <div class='top-actions'>
-    <button id='flipBtn' title='Flip board'>⇅</button>
-    <button id='soundBtn' title='Sound' class='on'>🔊</button>
+  <div class="top-actions">
+    <button id="flipBtn" title="Flip board">⇅</button>
+    <button id="soundBtn" title="Sound" class="on">🔊</button>
   </div>
 </header>
-<main class='layout'>
-  <section class='board-col'>
-    <div class='eval-wrap'>
-      <div id='evalBar' class='evalbar'><div id='evalFill'></div><span id='evalNum'>0.0</span></div>
-      <div class='board-frame'>
-        <div id='board' class='board'></div>
-        <svg id='arrows' class='arrows' viewBox='0 0 8 8' preserveAspectRatio='none'></svg>
-        <div id='thinking' class='thinking hidden'>…</div>
+
+<main class="layout">
+  <section class="board-col">
+    <div class="eval-wrap">
+      <div id="evalBar" class="evalbar"><div id="evalFill"></div><span id="evalNum">0.0</span></div>
+      <div class="board-frame">
+        <div id="board" class="board"></div>
+        <svg id="arrows" class="arrows" viewBox="0 0 8 8" preserveAspectRatio="none"></svg>
+        <div id="thinking" class="thinking hidden">…</div>
       </div>
     </div>
-    <div class='under-board'>
-      <div id='status' class='status'>White to move</div>
-      <div class='row'>
-        <button id='newBtn'>＋ New</button>
-        <button id='undoBtn'>↩ Undo</button>
-        <button id='hintBtn'>💡 Hint</button>
-        <button id='resignBtn'>🏳 Resign</button>
+    <div class="under-board">
+      <div id="status" class="status">White to move</div>
+      <div class="row">
+        <button id="newBtn">＋ New</button>
+        <button id="undoBtn">↩ Undo</button>
+        <button id="hintBtn">💡 Hint</button>
+        <button id="resignBtn">🏳 Resign</button>
       </div>
     </div>
   </section>
-  <aside class='side-col'>
-    <div id='panelPlay' class='panel'>
+
+  <aside class="side-col">
+    <!-- PLAY PANEL -->
+    <div id="panelPlay" class="panel">
       <h2>Play</h2>
-      <label class='lbl'>Mode</label>
-      <div class='seg' id='modeSeg'>
-        <button data-mode='bot' class='active'>🤖 Bot</button>
-        <button data-mode='local'>👥 2 Players</button>
-        <button data-mode='online'>🌐 Online</button>
+      <label class="lbl">Mode</label>
+      <div class="seg" id="modeSeg">
+        <button data-mode="bot" class="active">🤖 Bot</button>
+        <button data-mode="local">👥 2 Players</button>
+        <button data-mode="online">🌐 Online</button>
       </div>
-      <div id='botSetup'>
-        <label class='lbl'>Your colour</label>
-        <div class='seg' id='colorSeg'>
-          <button data-color='w' class='active'>White</button>
-          <button data-color='random'>Random</button>
-          <button data-color='b'>Black</button>
+
+      <div id="botSetup">
+        <label class="lbl">Your colour</label>
+        <div class="seg" id="colorSeg">
+          <button data-color="w" class="active">White</button>
+          <button data-color="random">Random</button>
+          <button data-color="b">Black</button>
         </div>
-        <label class='lbl'>Choose bot <span class='muted'>(Stockfish rated)</span></label>
-        <div id='botList' class='botlist'></div>
+        <label class="lbl">Choose bot <span class="muted">(rated)</span></label>
+        <div id="botList" class="botlist"></div>
       </div>
-      <div id='onlineSetup' class='hidden'>
-        <p class='muted'>Peer-to-peer, no account. Host creates a code, friend joins with it.</p>
-        <div class='row'>
-          <button id='hostBtn'>Create game code</button>
-          <button id='copyCodeBtn' class='hidden'>Copy</button>
+
+      <div id="onlineSetup" class="hidden">
+        <p class="muted">Peer-to-peer, no account. Host creates a code, friend joins with it.</p>
+        <div class="row">
+          <button id="hostBtn">Create game code</button>
+          <button id="copyCodeBtn" class="hidden">Copy</button>
         </div>
-        <div id='myCode' class='code hidden'></div>
-        <div class='row'>
-          <input id='joinCode' placeholder='Enter friend code e.g. AB12CD' maxlength='12'/>
-          <button id='joinBtn'>Join</button>
+        <div id="myCode" class="code hidden"></div>
+        <div class="row">
+          <input id="joinCode" placeholder="Enter friend's code e.g. AB12CD" maxlength="12"/>
+          <button id="joinBtn">Join</button>
         </div>
-        <div id='netStatus' class='muted'></div>
-        <div class='row'>
-          <button id='leaveNetBtn' class='hidden'>Disconnect</button>
+        <div id="netStatus" class="muted"></div>
+        <div class="row">
+          <button id="leaveNetBtn" class="hidden">Disconnect</button>
         </div>
       </div>
-      <div class='moves-head'>
+
+      <div class="moves-head">
         <span>Moves</span>
-        <span id='accLine' class='muted'></span>
+        <span id="accLine" class="muted"></span>
       </div>
-      <ol id='moveList' class='moves'></ol>
-      <div class='row wrap'>
-        <button id='analyseBtn'>🔍 Analyse this game</button>
-        <button id='pgnBtn'>📋 Copy PGN</button>
+      <ol id="moveList" class="moves"></ol>
+
+      <div class="row wrap">
+        <button id="analyseBtn">🔍 Analyse this game</button>
+        <button id="pgnBtn">📋 Copy PGN</button>
       </div>
-      <div id='resultCard' class='result hidden'></div>
+      <div id="resultCard" class="result hidden"></div>
     </div>
-    <div id='panelAnalyse' class='panel hidden'>
-      <h2>Analysis <span class='muted'>like chess.com</span></h2>
-      <div class='muted' style='margin:6px 0'>Stockfish 19 · every move rated · accuracy + eval graph</div>
-      <div class='row'>
-        <button id='runReviewBtn' class='primary'>▶ Game Review</button>
-        <button id='stopReviewBtn' class='hidden'>⏹ Stop</button>
+
+    <!-- ANALYSE PANEL -->
+    <div id="panelAnalyse" class="panel hidden">
+      <h2>Analysis <span class="muted">like chess.com</span></h2>
+      <div id="sfStatus" class="engine-line muted">Stockfish · loads when you open Analysis</div>
+      <label class="lbl">Review speed</label>
+      <div class="seg" id="speedSeg">
+        <button data-speed="fast" title="~0.4 s per move">⚡ Fast</button>
+        <button data-speed="balanced" class="active" title="~1.2 s per move">⚖ Balanced</button>
+        <button data-speed="deep" title="~2.5 s per move">🔍 Deep</button>
       </div>
-      <div id='reviewSummary' class='review-summary'></div>
-      <div class='row'>
-        <button id='prevBtn'>◀</button>
-        <button id='nextBtn'>▶</button>
-        <button id='firstBtn'>⏮</button>
-        <button id='lastBtn'>⏭</button>
-        <label class='chk'><input type='checkbox' id='showBestChk' checked/> best line</label>
+      <div class="row">
+        <button id="runReviewBtn" class="primary">▶ Game Review</button>
+        <button id="stopReviewBtn" class="hidden">⏹ Stop</button>
       </div>
-      <div id='engineLine' class='engine-line muted'>Engine ready.</div>
-      <div class='row wrap'>
-        <input id='pgnIn' placeholder='Paste PGN here to load…'/>
-        <button id='loadPgnBtn'>Load PGN</button>
+      <div id="reviewSummary" class="review-summary"></div>
+      <div class="row">
+        <button id="prevBtn">◀</button>
+        <button id="nextBtn">▶</button>
+        <button id="firstBtn">⏮</button>
+        <button id="lastBtn">⏭</button>
+        <label class="chk"><input type="checkbox" id="showBestChk" checked/> best line</label>
       </div>
-      <div class='row wrap'>
-        <input id='fenIn' placeholder='Or paste FEN…'/>
-        <button id='loadFenBtn'>Load FEN</button>
+      <div id="engineLine" class="engine-line muted">Engine ready.</div>
+      <div class="row wrap">
+        <input id="pgnIn" placeholder="Paste PGN here to load…"/>
+        <button id="loadPgnBtn">Load PGN</button>
+      </div>
+      <div class="row wrap">
+        <input id="fenIn" placeholder="Or paste FEN…"/>
+        <button id="loadFenBtn">Load FEN</button>
       </div>
     </div>
-    <div id='panelBots' class='panel hidden'>
+
+    <!-- BOTS PANEL -->
+    <div id="panelBots" class="panel hidden">
       <h2>Bot ratings</h2>
-      <p class='muted'>These bots are powered by Stockfish 19 in your browser, limited to each rating with Skill Level / UCI_Elo. The eval bar and Game Review use full-strength Stockfish.</p>
-      <div id='botTable'></div>
-      <h3>How this works</h3>
-      <ul class='bullets'>
-        <li><b>Ratings:</b> Sprout 300 · Pixel 600 · Mira 900 · Jonah 1200 · Zara 1500 · Odin 1850</li>
-        <li><b>Strength:</b> Skill Level for lower bots, UCI_Elo strength limiting for 1500 and 1850</li>
-        <li><b>Analysis:</b> hints search to depth 24; Game Review searches every move at depth 18</li>
-        <li><b>Local:</b> Stockfish 19 lite (NNUE WASM) runs in a Web Worker; no server, no API keys</li>
+      <p class="muted">Elo is calibrated to feel like Chess.com bots: lower bots blunder and play randomly, higher bots search deeper. All run 100% in your browser — no server.</p>
+      <div id="botTable"></div>
+      <h3>How elo works here</h3>
+      <ul class="bullets">
+        <li><b>Depth:</b> 1 ply at 300–600, 2 at 900, 3 at 1200, 4 at 1500, 5 at 1850 (iterative deepening)</li>
+        <li><b>Randomness:</b> ±250cp at 300 falling to ±5cp at 1850</li>
+        <li><b>Blunders:</b> 26% random moves at 300 falling to 1% at 1850</li>
+        <li><b>Search:</b> alpha-beta with transposition table, killer moves, history heuristic and quiescence</li>
       </ul>
     </div>
   </aside>
 </main>
-<footer class='foot'>
-  <span>Stockfish 19 + chess.js · runs locally · GitHub Pages</span>
+
+<footer class="foot">
+  <span>Free & open source • Deployed on GitHub Pages • Moves + analysis run locally</span>
+  <a href="./README.md">Deploy guide</a>
 </footer>
-<script src='./stockfish-preload.js'></script>
-<script src='./app.js'></script>
-<script src='./sf-core.js'></script>
-<script src='./sf-review.js'></script>
+
+<script src="./app.js"></script>
 </body>
 </html>

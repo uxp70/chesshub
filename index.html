@@ -90,7 +90,13 @@
     </div>
     <div id='panelAnalyse' class='panel hidden'>
       <h2>Analysis <span class='muted'>like chess.com</span></h2>
-      <div class='muted' style='margin:6px 0'>Stockfish 19 · deep search to depth 26 · every move rated · accuracy + eval graph</div>
+      <div class='muted' style='margin:6px 0'>Stockfish 19 · every move rated · accuracy + eval graph</div>
+      <label class='lbl'>Review speed</label>
+      <div class='seg' id='speedSeg'>
+        <button data-speed='fast' title='~0.4 s per move'>⚡ Fast</button>
+        <button data-speed='balanced' class='active' title='~1.2 s per move'>⚖ Balanced</button>
+        <button data-speed='deep' title='~2.5 s per move'>🔍 Deep</button>
+      </div>
       <div class='row'>
         <button id='runReviewBtn' class='primary'>▶ Game Review</button>
         <button id='stopReviewBtn' class='hidden'>⏹ Stop</button>
@@ -121,7 +127,7 @@
       <ul class='bullets'>
         <li><b>Ratings:</b> Sprout 300 · Pixel 600 · Mira 900 · Jonah 1200 · Zara 1500 · Odin 1850</li>
         <li><b>Strength:</b> Skill Level for lower bots, UCI_Elo strength limiting for 1500 and 1850</li>
-        <li><b>Analysis:</b> hints search to depth 24; Game Review searches every move to depth 26 (2.5 s per position, slower on long games) and shows the depth it actually reached</li>
+        <li><b>Analysis:</b> hints search to depth 24; Game Review searches every move and shows the depth it reached — pick ⚡ Fast, ⚖ Balanced (default) or 🔍 Deep in the Analyse panel</li>
         <li><b>Local:</b> Stockfish 19 lite (NNUE WASM) runs in a Web Worker; no server, no API keys</li>
       </ul>
     </div>

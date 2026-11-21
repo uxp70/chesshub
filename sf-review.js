@@ -9,11 +9,16 @@ var el=SF.el;
 var VAL={p:100,n:320,b:330,r:500,q:900,k:0};
 var TAGS={Brilliant:'!!',Great:'!',Best:'✓',Excellent:'✓',Good:'·',Book:'📖',Inaccuracy:'?!',Mistake:'?',Miss:'×',Blunder:'??'};
 var BOOK={e4:1,d4:1,Nf3:1,c4:1,g3:1,b3:1,e5:1,c5:1,e6:1,c6:1,d5:1,Nf6:1,Nc6:1,d6:1,g6:1,b6:1,a6:1,h6:1,Be7:1,Bb4:1,Bc5:1,Nd7:1,Be6:1,Bg7:1,'O-O':1,'O-O-O':1};
-/* Per-position search budget for Game Review. Previous setting was 'depth 18 movetime 400'. */
-var REVIEW_DEPTH=26;
-var REVIEW_MS=2500;
-var REVIEW_GO='depth '+REVIEW_DEPTH+' movetime '+REVIEW_MS;
-var review=null,graph=null,stopFlag=false,busy=false,originalRun=null;
+/* Per-position search budget for Game Review: the deep search is opt-in. */
+var REVIEW_SPEEDS={
+  fast:{depth:18,ms:400,label:'fast'},
+  balanced:{depth:22,ms:1200,label:'balanced'},
+  deep:{depth:26,ms:2500,label:'deep'}
+};
+var reviewSpeed='balanced';
+function budget(){return REVIEW_SPEEDS[reviewSpeed]||REVIEW_SPEEDS.balanced;}
+function reviewGo(){var s=budget();return 'depth '+s.depth+' movetime '+s.ms;}
+var review=null,graph=null,stopFlag=false,busy=false,originalRun=null,runSeq=0;
 function tagSpan(t){
   var s=el('span','tag '+t,TAGS[t]);
   s.title=t;
@@ -177,7 +182,7 @@ function renderReviewAt(p){
 }
 function evalPos(fen){
   var t0=Date.now();
-  return SF.search(fen,REVIEW_GO,SF.configureFull).then(function(res){
+  return SF.search(fen,reviewGo(),SF.configureFull).then(function(res){
     var g=new Orig(fen),turn=g.turn(),cp;
     if(res.mate!==null&&typeof res.mate==='number'){cp=res.mate>0?100000:-100000;}
     else{cp=(res.cp===null||typeof res.cp!=='number')?0:res.cp;}
@@ -211,6 +216,15 @@ function finishReview(){
     if(lineEl){lineEl.textContent='Stockfish review complete · '+depthText(review)+' · every move rated';}
   }
 }
+function abortUI(){
+  busy=false;
+  runSeq++;
+  SF.setRunning(false);
+  var runBtn=$('runReviewBtn'),stopBtn=$('stopReviewBtn'),t=$('engineLine');
+  if(runBtn){runBtn.disabled=false;}
+  if(stopBtn){stopBtn.classList.add('hidden');}
+  if(t){t.textContent='Review stopped.';}
+}
 function fallbackReview(){
   busy=false;
   SF.setRunning(false);
@@ -224,6 +238,7 @@ function runDeepReview(){
   var sans=g.history();
   if(!sans.length){alert('Play some moves first (or load a PGN).');return;}
   busy=true;
+  var myRun=++runSeq;
   SF.setRunning(true);
   SF.setReviewShown(false);
   stopFlag=false;
@@ -231,13 +246,17 @@ function runDeepReview(){
   var runBtn=$('runReviewBtn'),stopBtn=$('stopReviewBtn'),sum=$('reviewSummary'),lineEl=$('engineLine');
   if(runBtn){runBtn.disabled=true;}
   if(stopBtn){stopBtn.classList.remove('hidden');}
-  if(sum){sum.innerHTML='';sum.appendChild(el('div','muted','Deep review: Stockfish searches every move to depth '+REVIEW_DEPTH+' (up to '+(REVIEW_MS/1000).toFixed(1)+' s per position)…'));}
+  var b0=budget();
+  if(sum){sum.innerHTML='';sum.appendChild(el('div','muted','Review ('+b0.label+'): Stockfish searches every move up to depth '+b0.depth+' ('+(b0.ms/1000).toFixed(1)+' s per position max)…'));}
   if(lineEl){lineEl.textContent='Loading Stockfish…';}
   var tab=$('tabAnalyse');
   if(tab&&$('panelAnalyse')&&$('panelAnalyse').classList.contains('hidden')){tab.click();}
   SF.startEngine().then(async function(){
+    if(myRun!==runSeq){return;}
+    if(lineEl){lineEl.textContent='Stockfish: searching position 1/'+(sans.length+1)+'…';}
     var replay=new Orig();
     var first=await evalPos(replay.fen());
+    if(stopFlag){if(lineEl){lineEl.textContent='Review stopped.';}finishReview();return;}
     review={sans:sans,classes:[],lines:[first],evals:[first.white],counts:{w:{},b:{}},wAcc:[],bAcc:[],p:0,depths:[first.depth||0],ms:[first.ms||0],totalMs:first.ms||0};
     var i,turn,legalBefore,before,mv,after,winBefore,winAfter,drop,side,cls,acc,isBest,isOnly,sac;
     for(i=0;i<sans.length;i++){
@@ -247,6 +266,8 @@ function runDeepReview(){
       before=review.lines[i];
       mv=replay.move(sans[i]);
       after=await evalPos(replay.fen());
+      if(myRun!==runSeq){return;}
+      if(stopFlag){break;}
       review.lines[i+1]=after;
       review.evals[i+1]=after.white;
       review.depths[i+1]=after.depth||0;
@@ -275,13 +296,14 @@ function runDeepReview(){
       }
       review.classes[i]=cls;
       review.counts[side][cls]=(review.counts[side][cls]||0)+1;
-      if(lineEl){lineEl.textContent='Stockfish: move '+(i+1)+'/'+sans.length+' · depth '+(after.depth||'?')+' of '+REVIEW_DEPTH+' · '+((after.ms||0)/1000).toFixed(1)+' s · '+cls;}
+      if(lineEl){lineEl.textContent='Stockfish: move '+(i+1)+'/'+sans.length+' · depth '+(after.depth||'?')+' of '+budget().depth+' · '+((after.ms||0)/1000).toFixed(1)+' s · '+cls;}
       renderSummary(review);
       await new Promise(function(r){setTimeout(r,0);});
     }
     review.p=Math.min(review.classes.length,review.sans.length);
     finishReview();
   }).catch(function(e){
+    if(myRun!==runSeq){return;}
     busy=false;
     SF.setRunning(false);
     SF.setReviewShown(false);
@@ -293,10 +315,33 @@ function runDeepReview(){
 }
 function init(){
   makeGraph();
+  var speedBtns=document.querySelectorAll('#speedSeg button');
+  function paintSpeed(){
+    for(var k=0;k<speedBtns.length;k++){
+      var btn=speedBtns[k];
+      if(btn.dataset.speed===reviewSpeed){btn.classList.add('active');}else{btn.classList.remove('active');}
+    }
+  }
+  function wireSpeed(i){
+    var btn=speedBtns[i];
+    if(!btn){return;}
+    btn.addEventListener('click',function(){
+      reviewSpeed=btn.dataset.speed||'balanced';
+      paintSpeed();
+      var l=$('engineLine');
+      if(l&&!busy){var s=budget();l.textContent='Review speed: '+s.label+' · up to depth '+s.depth+' · '+(s.ms/1000).toFixed(1)+' s per position';}
+    });
+  }
+  for(var wi=0;wi<speedBtns.length;wi++){wireSpeed(wi);}
+  paintSpeed();
   var rb=$('runReviewBtn'),sb=$('stopReviewBtn'),ab=$('analyseBtn');
   originalRun=rb?rb.onclick:null;
   if(rb){rb.onclick=null;rb.addEventListener('click',function(){runDeepReview();});}
-  if(sb){sb.onclick=null;sb.addEventListener('click',function(){stopFlag=true;if(SF.stop){SF.stop();}});}
+  if(sb){sb.onclick=null;sb.addEventListener('click',function(){
+    stopFlag=true;
+    if(SF.stop){SF.stop();}
+    if(busy){abortUI();}
+  });}
   if(ab){ab.onclick=null;ab.addEventListener('click',function(){var t=$('tabAnalyse');if(t){t.click();}runDeepReview();});}
   var nav=function(id,fn){var b=$(id);if(b){b.onclick=null;b.addEventListener('click',fn);}};
   nav('prevBtn',function(){if(review){renderReviewAt(review.p-1);}});

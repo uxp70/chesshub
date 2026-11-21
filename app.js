@@ -10,12 +10,12 @@ evalFill=$('evalFill'),evalNum=$('evalNum'),thinkingEl=$('thinking');
  *  Bots
  * ------------------------------------------------------------------ */
 const BOTS=[
- {name:"Sprout",elo:300,avatar:"🌱",depth:1,rand:250,blunder:0.26,time:0,q:false,style:"Fresh to the board. Nearly random, perfect for a first game."},
- {name:"Pixel",elo:600,avatar:"🕹️",depth:1,rand:110,blunder:0.15,time:0,q:false,style:"Knows how the pieces move and occasionally finds a good idea."},
- {name:"Mira",elo:900,avatar:"🌙",depth:2,rand:70,blunder:0.09,time:0,q:false,style:"Club-level instincts. Punishes obvious one-move blunders."},
- {name:"Jonah",elo:1200,avatar:"🎯",depth:3,rand:28,blunder:0.04,time:100,q:true,style:"Calculates short tactics and rarely gives away material."},
- {name:"Zara",elo:1500,avatar:"🐺",depth:4,rand:12,blunder:0.02,time:240,q:true,style:"Deep, patient play with strong positional understanding."},
- {name:"Odin",elo:1850,avatar:"👑",depth:5,rand:5,blunder:0.01,time:550,q:true,style:"The final boss. Searches five plies and almost never errs."}
+ {name:"Sprout",elo:300,avatar:"🌱",depth:1,sf:"Stockfish Skill 0 · depth 1",rand:250,blunder:0.26,time:0,q:false,style:"Fresh to the board. Nearly random, perfect for a first game."},
+ {name:"Pixel",elo:600,avatar:"🕹️",depth:1,sf:"Stockfish Skill 1 · depth 2",rand:110,blunder:0.15,time:0,q:false,style:"Knows how the pieces move and occasionally finds a good idea."},
+ {name:"Mira",elo:900,avatar:"🌙",depth:2,sf:"Stockfish Skill 3 · depth 3",rand:70,blunder:0.09,time:0,q:false,style:"Club-level instincts. Punishes obvious one-move blunders."},
+ {name:"Jonah",elo:1200,avatar:"🎯",depth:3,sf:"Stockfish Skill 6 · depth 5",rand:28,blunder:0.04,time:100,q:true,style:"Calculates short tactics and rarely gives away material."},
+ {name:"Zara",elo:1500,avatar:"🐺",depth:4,sf:"Stockfish UCI_Elo 1500 · depth 8",rand:12,blunder:0.02,time:240,q:true,style:"Deep, patient play with strong positional understanding."},
+ {name:"Odin",elo:1850,avatar:"👑",depth:5,sf:"Stockfish UCI_Elo 1850 · depth 12",rand:5,blunder:0.01,time:550,q:true,style:"The final boss. Searches to depth 12 and almost never errs."}
 ];
 let game=new Chess();
 let mode='bot', botIdx=2, playerColor='w', orientation='w';
@@ -894,7 +894,7 @@ function buildBots(){
     const btn=document.createElement('button');
     btn.className='bot'+(i===botIdx?' active':'');
     btn.innerHTML='<span class="avatar">'+b.avatar+'</span><span><span class="nm">'+b.name+
-      '</span><br><span class="elo">Elo '+b.elo+' · depth '+b.depth+' · '+b.style+'</span></span>';
+      '</span><br><span class="elo">Elo '+b.elo+' · '+b.sf+' · '+b.style+'</span></span>';
     btn.onclick=()=>{botIdx=i;mode='bot';setModeUI();buildBots();buildBotTable();newGame();};
     bl.appendChild(btn);
   });

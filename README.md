@@ -6,6 +6,8 @@ Features:
 - 🤖 6 rated bots (300 → 1850), all running locally: **Sprout, Pixel, Mira, Jonah, Zara, Odin**.
 - 👥 Local two-player and 🌐 online friend play through PeerJS (free WebRTC, no account: host creates a six-letter code, friend joins).
 - 🔍 chess.com-style **Game Review**: eval bar, best-move arrow, principal variation, move classifications (Brilliant / Great / Best / Excellent / Good / Inaccuracy / Mistake / Miss / Blunder), tallies per side, per-move accuracy and white/black averages. Keyboard navigation, PGN/FEN import, hint engine. Review and hints are powered by **Stockfish 19** running in a Web Worker.
+- 🎯 **Move-quality badges on the board**: every reviewed move keeps a small chess.com-style marker on its piece (`!!` brilliant, `!` great, `??` blunder, …), so the whole game's mistakes can be scanned at once instead of one move at a time. Badges follow their piece and disappear when it is captured.
+- ⚠ **Jump to the next mistake** with `[` / `]` (or the ⚠ ◀ / ⚠ ▶ buttons), plus a live review progress bar and an annotated move list beside the board.
 
 ## Run locally
 

@@ -5,7 +5,7 @@
 <meta name='viewport' content='width=device-width,initial-scale=1'/>
 <title>ChessHub — Play bots, friends & analyse</title>
 <meta name='description' content='Free chess: play Stockfish-powered bots, play friends online, and analyse every move like chess.com.'/>
-<link rel='stylesheet' href='./styles.css?v=badges'/>
+<link rel='stylesheet' href='./styles.css?v=polish5'/>
 <script src='https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js'></script>
 <script src='https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js'></script>
 </head>
@@ -102,13 +102,20 @@
         <button id='stopReviewBtn' class='hidden'>⏹ Stop</button>
       </div>
       <div id='reviewSummary' class='review-summary'></div>
-      <div class='row'>
-        <button id='prevBtn'>◀</button>
-        <button id='nextBtn'>▶</button>
-        <button id='firstBtn'>⏮</button>
-        <button id='lastBtn'>⏭</button>
-        <label class='chk'><input type='checkbox' id='showBestChk' checked/> best line</label>
+      <div id='badgeLegend' class='legend hidden'></div>
+      <div id='reviewBar' class='reviewbar hidden'><div id='reviewBarFill'></div></div>
+      <div class='navgrid'>
+        <button id='firstBtn' title='Start of game (Home)'>⏮</button>
+        <button id='prevBtn' title='Previous move (←)'>◀</button>
+        <button id='nextBtn' title='Next move (→)'>▶</button>
+        <button id='lastBtn' title='End of game (End)'>⏭</button>
+        <button id='prevMistBtn' class='navbad' title='Previous mistake ([)'>⚠ ◀</button>
+        <button id='nextMistBtn' class='navbad' title='Next mistake (])'>⚠ ▶</button>
       </div>
+      <label class='chk'><input type='checkbox' id='showBestChk' checked/> best line</label>
+      <div class='kbd-hint muted'>← → step through the game · [ ] jump between mistakes</div>
+      <div class='moves-head'><span>Moves</span><span class='muted'>click a move to jump</span></div>
+      <ol id='reviewMoves' class='moves review-moves'></ol>
       <div id='engineLine' class='engine-line muted'>Engine ready.</div>
       <div class='row wrap'>
         <input id='pgnIn' placeholder='Paste PGN here to load…'/>
@@ -136,9 +143,9 @@
 <footer class='foot'>
   <span>Stockfish 19 + chess.js · runs locally · GitHub Pages</span>
 </footer>
-<script src='./stockfish-preload.js'></script>
-<script src='./app.js'></script>
-<script src='./sf-core.js'></script>
-<script src='./sf-review.js'></script>
+<script src='./stockfish-preload.js?v=polish5'></script>
+<script src='./app.js?v=polish5'></script>
+<script src='./sf-core.js?v=polish5'></script>
+<script src='./sf-review.js?v=polish5'></script>
 </body>
 </html>

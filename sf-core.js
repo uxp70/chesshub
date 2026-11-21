@@ -10,7 +10,7 @@ var EVAL_GO='depth 12 movetime 150';
 var UNI={k:'♚',q:'♛',r:'♜',b:'♝',n:'♞',p:'♟︎'};
 var worker=null,ready=null,readyOk=false,listeners=[],chain=Promise.resolve(),current=null;
 var evalToken=0,lastHandledFen=null,botBusy=false,reviewShown=false,running=false;
-var whiteView=true,originalHint=null;
+var whiteView=true;
 function log(){try{console.log.apply(console,['[SF]'].concat([].slice.call(arguments)));}catch(e){}}
 function send(cmd){if(worker){worker.postMessage(cmd);}}
 function onLine(fn){listeners.push(fn);return function(){var i=listeners.indexOf(fn);if(i>=0){listeners.splice(i,1);}};}
@@ -254,11 +254,10 @@ function watch(){
   var obs=new MutationObserver(schedule),ids=['moveList','status','resultCard','board'],i,e;
   for(i=0;i<ids.length;i++){e=$(ids[i]);if(e){obs.observe(e,{childList:true,subtree:true,characterData:true});}}
 }
-function fallbackHint(ev){if(originalHint){try{originalHint.call($('hintBtn'),ev);}catch(e){log(e);}}}
 function deepHint(ev){
   if(running){alert('Stop the review first.');return;}
   var g=getLiveGame();
-  if(!g){fallbackHint(ev);return;}
+  if(!g){return;}
   if(g.game_over()){return;}
   var fen=g.fen(),th=$('thinking'),lineEl=$('engineLine');
   if(th){th.classList.remove('hidden');}
@@ -270,12 +269,12 @@ function deepHint(ev){
     if(res.pv&&res.pv.length){txt+=' · line '+pvToSan(fen,res.pv,6);}
     if(lineEl){lineEl.textContent=txt;}
     drawArrow(res.best,true);
-  }).catch(function(e){if(th){th.classList.add('hidden');}log('hint failed',e);fallbackHint(ev);});
+  }).catch(function(e){if(th){th.classList.add('hidden');}log('hint failed',e);});
 }
 window.SF={search:search,startEngine:startEngine,configureFull:configureFull,Orig:Orig,$:$,el:el,setBar:setBar,evalText:evalText,whiteCp:whiteCp,uciToSan:uciToSan,pvToSan:pvToSan,drawBoard:drawBoard,drawArrow:drawArrow,getLiveGame:getLiveGame,stop:function(){if(current){send('stop');}},setRunning:function(v){running=v;},setReviewShown:function(v){reviewShown=v;},isReviewShown:function(){return reviewShown;},winPct:function(cp){return 100/(1+Math.exp(-0.0038*cp));},winFor:function(cp,t){var w=100/(1+Math.exp(-0.0038*cp));return t==='w'?w:100-w;},accFor:function(d){return Math.max(0,Math.min(100,103.1668*Math.exp(-0.04354*Math.max(0,d))-3.1669));},avg:function(a){return a.length?a.reduce(function(x,y){return x+y;},0)/a.length:null;},fmtAcc:function(a){return a===null?'–':a.toFixed(1);}};
 (function(){
   var hb=$('hintBtn');
-  if(hb){originalHint=hb.onclick;hb.onclick=null;hb.addEventListener('click',deepHint);}
+  if(hb){hb.onclick=null;hb.addEventListener('click',deepHint);}
   watch();
   startEngine().catch(function(){});
   schedule();

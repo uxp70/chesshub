@@ -18,7 +18,7 @@ var REVIEW_SPEEDS={
 var reviewSpeed='balanced';
 function budget(){return REVIEW_SPEEDS[reviewSpeed]||REVIEW_SPEEDS.balanced;}
 function reviewGo(){var s=budget();return 'depth '+s.depth+' movetime '+s.ms;}
-var review=null,graph=null,stopFlag=false,busy=false,originalRun=null,runSeq=0;
+var review=null,graph=null,stopFlag=false,busy=false,runSeq=0;
 function tagSpan(t){
   var s=el('span','tag '+t,TAGS[t]);
   s.title=t;
@@ -225,16 +225,10 @@ function abortUI(){
   if(stopBtn){stopBtn.classList.add('hidden');}
   if(t){t.textContent='Review stopped.';}
 }
-function fallbackReview(){
-  busy=false;
-  SF.setRunning(false);
-  SF.setReviewShown(false);
-  if(originalRun){try{originalRun.call($('runReviewBtn'));}catch(e){}}
-}
 function runDeepReview(){
   if(busy){return;}
   var g=SF.getLiveGame();
-  if(!g){fallbackReview();return;}
+  if(!g){return;}
   var sans=g.history();
   if(!sans.length){alert('Play some moves first (or load a PGN).');return;}
   busy=true;
@@ -310,7 +304,6 @@ function runDeepReview(){
     if(runBtn){runBtn.disabled=false;}
     if(stopBtn){stopBtn.classList.add('hidden');}
     if(lineEl){lineEl.textContent='Stockfish unavailable: '+e.message;}
-    fallbackReview();
   });
 }
 function init(){
@@ -335,7 +328,6 @@ function init(){
   for(var wi=0;wi<speedBtns.length;wi++){wireSpeed(wi);}
   paintSpeed();
   var rb=$('runReviewBtn'),sb=$('stopReviewBtn'),ab=$('analyseBtn');
-  originalRun=rb?rb.onclick:null;
   if(rb){rb.onclick=null;rb.addEventListener('click',function(){runDeepReview();});}
   if(sb){sb.onclick=null;sb.addEventListener('click',function(){
     stopFlag=true;

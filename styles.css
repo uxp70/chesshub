@@ -22,6 +22,12 @@
 .sq .pc{filter:drop-shadow(0 1px 0 rgba(0,0,0,.4));line-height:1}
 .sq.w .pc{color:#fafafa;text-shadow:0 0 2px #000,0 2px 3px rgba(0,0,0,.7)}
 .sq.b .pc{color:#111;text-shadow:0 0 2px #fff,0 1px 1px rgba(255,255,255,.4)}
+.sq .mvbadge{position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;line-height:1;letter-spacing:-.5px;color:#fff;border:1.5px solid rgba(0,0,0,.35);box-shadow:0 1px 4px rgba(0,0,0,.5);pointer-events:none;z-index:3}
+.sq .mvbadge.Brilliant{background:#12b3b3}.sq .mvbadge.Great{background:#5b8fd9}.sq .mvbadge.Best{background:#9bc25a;color:#101510}
+.sq .mvbadge.Excellent{background:#7fa650}.sq .mvbadge.Good{background:#5f8f45}.sq .mvbadge.Book{background:#a98545;font-size:10px}
+.sq .mvbadge.Inaccuracy{background:#f0b429;color:#101510}.sq .mvbadge.Mistake{background:#e07020}.sq .mvbadge.Miss{background:#e03b3b}
+.sq .mvbadge.Blunder{background:#d32f2f}
+@media(max-width:420px){.sq .mvbadge{width:17px;height:17px;font-size:9px}}
 .coord{position:absolute;font-size:10px;font-weight:800;opacity:.8}.coord.r{top:2px;left:4px}.coord.f{bottom:1px;right:4px}
 .arrows{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
 .thinking{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.75);padding:6px 12px;border-radius:20px;font-weight:700}

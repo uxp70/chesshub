@@ -139,7 +139,7 @@ function drawBoard(g){
   for(ri=0;ri<8;ri++){for(ci=0;ci<8;ci++){
     r=rows[ri];c=cols[ci];d=document.createElement('div');
     d.className='sq '+(((r+c)%2===1)?'light':'dark');
-    nm='abcdefgh'[c]+(8-r);
+    nm='abcdefgh'[c]+(8-r);d.dataset.sq=nm;
     if(last&&(last.from===nm||last.to===nm)){d.classList.add('last');}
     if(checkSq===nm){d.classList.add('check');}
     if((whiteView&&ci===0)||(!whiteView&&ci===7)){s=document.createElement('span');s.className='coord r';s.textContent=8-r;d.appendChild(s);}

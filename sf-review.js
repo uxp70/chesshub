@@ -160,13 +160,25 @@ function renderMoveList(){
     box.appendChild(li);
   }
 }
+function drawMoveBadge(sq,cls){
+  if(!sq||!cls){return;}
+  var b=$('board');
+  if(!b){return;}
+  var cell=b.querySelector('.sq[data-sq="'+sq+'"]');
+  if(!cell){return;}
+  var badge=el('span','mvbadge '+cls,TAGS[cls]||'');
+  badge.title=cls+' move';
+  badge.setAttribute('aria-label',cls+' move');
+  cell.appendChild(badge);
+}
 function renderReviewAt(p){
   if(!review){return;}
   p=Math.max(0,Math.min(review.classes.length,p));
   review.p=p;
-  var g=new Orig(),i,line,status;
-  for(i=0;i<p;i++){g.move(review.sans[i]);}
+  var g=new Orig(),i,line,status,mv,lastTo=null;
+  for(i=0;i<p;i++){mv=g.move(review.sans[i]);if(i===p-1&&mv){lastTo=mv.to;}}
   SF.drawBoard(g);
+  drawMoveBadge(lastTo,p>0?review.classes[p-1]:null);
   line=review.lines[p];
   status=$('status');
   if(status){

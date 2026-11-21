@@ -5,7 +5,7 @@
 <meta name='viewport' content='width=device-width,initial-scale=1'/>
 <title>ChessHub — Play bots, friends & analyse</title>
 <meta name='description' content='Free chess: play Stockfish-powered bots, play friends online, and analyse every move like chess.com.'/>
-<link rel='stylesheet' href='./styles.css?v=polish5'/>
+<link rel='stylesheet' href='./styles.css?v=polish8'/>
 <script src='https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js'></script>
 <script src='https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js'></script>
 </head>
@@ -33,6 +33,13 @@
       </div>
     </div>
     <div class='under-board'>
+      <div id='boardNav' class='boardnav hidden'>
+        <button id='bPrev' title='Previous move (←)' aria-label='Previous move'>◀</button>
+        <span id='bMove' class='bmove'>start</span>
+        <button id='bNext' title='Next move (→)' aria-label='Next move'>▶</button>
+        <button id='bPrevMist' class='navbad' title='Previous mistake ([)' aria-label='Previous mistake'>⚠◀</button>
+        <button id='bNextMist' class='navbad' title='Next mistake (])' aria-label='Next mistake'>⚠▶</button>
+      </div>
       <div id='status' class='status'>White to move</div>
       <div class='row'>
         <button id='newBtn'>＋ New</button>
@@ -143,9 +150,9 @@
 <footer class='foot'>
   <span>Stockfish 19 + chess.js · runs locally · GitHub Pages</span>
 </footer>
-<script src='./stockfish-preload.js?v=polish5'></script>
-<script src='./app.js?v=polish5'></script>
-<script src='./sf-core.js?v=polish5'></script>
-<script src='./sf-review.js?v=polish5'></script>
+<script src='./stockfish-preload.js?v=polish7'></script>
+<script src='./app.js?v=polish7'></script>
+<script src='./sf-core.js?v=polish7'></script>
+<script src='./sf-review.js?v=polish7'></script>
 </body>
 </html>

@@ -152,19 +152,26 @@ function drawBoard(g){
 function xy(sq){var f=sq.charCodeAt(0)-97,r=8-parseInt(sq[1],10);if(!whiteView){f=7-f;r=7-r;}return [f+0.5,r+0.5];}
 function drawArrow(uci,force){
   var svg=$('arrows');if(!svg){return;}
+  var NS='http://www.w3.org/2000/svg';
   svg.innerHTML='';
   if(!uci){return;}
   if(!force){var chk=$('showBestChk');if(chk&&!chk.checked){return;}}
   var coord=document.querySelector('#board .coord.r');
   if(coord){whiteView=coord.textContent==='8';}
   var a=xy(uci.slice(0,2)),b=xy(uci.slice(2,4));
-  var line=document.createElementNS('http://www.w3.org/2000/svg','line');
+  var defs=document.createElementNS(NS,'defs');
+  var mk=document.createElementNS(NS,'marker');
+  mk.setAttribute('id','sfHead');mk.setAttribute('markerUnits','userSpaceOnUse');
+  mk.setAttribute('markerWidth','0.4');mk.setAttribute('markerHeight','0.4');
+  mk.setAttribute('refX','0.34');mk.setAttribute('refY','0.2');mk.setAttribute('orient','auto');
+  var head=document.createElementNS(NS,'path');
+  head.setAttribute('d','M0,0 L0.4,0.2 L0,0.4 Z');head.setAttribute('fill','#3fbf63');
+  mk.appendChild(head);defs.appendChild(mk);svg.appendChild(defs);
+  var line=document.createElementNS(NS,'line');
   line.setAttribute('x1',a[0]);line.setAttribute('y1',a[1]);line.setAttribute('x2',b[0]);line.setAttribute('y2',b[1]);
-  line.setAttribute('stroke','#2ebd5b');line.setAttribute('stroke-width','0.2');line.setAttribute('stroke-linecap','round');line.setAttribute('opacity','0.85');
+  line.setAttribute('stroke','#3fbf63');line.setAttribute('stroke-width','0.13');line.setAttribute('stroke-linecap','round');
+  line.setAttribute('opacity','0.92');line.setAttribute('marker-end','url(#sfHead)');
   svg.appendChild(line);
-  var dot=document.createElementNS('http://www.w3.org/2000/svg','circle');
-  dot.setAttribute('cx',b[0]);dot.setAttribute('cy',b[1]);dot.setAttribute('r','0.3');dot.setAttribute('fill','#2ebd5b');
-  svg.appendChild(dot);
 }
 function sansFromDom(){
   var lis=document.querySelectorAll('#moveList li'),out=[],i,j,k,clone,text,parts,t;

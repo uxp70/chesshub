@@ -1,14 +1,14 @@
 SF_PRESENT
 ENGINE {"ok":true,"best":"e2e4","depth":10,"cp":31}
-HINT Stockfish depth 24 · best e4 (+0.26) · line e4 e5
-MOVES 1. e4  e6
+HINT Stockfish depth 24 · best e4 (+0.31) · line e4 e5
+MOVES 1. e4  d5
 THINKING_HIDDEN true
-REVIEW_SUMMARY –White accuracy–Black accuracy2moves ratedMoveWBBook11
+REVIEW_SUMMARY –White accuracy–Black accuracy2moves ratedStockfish reached depth 23–26 (avg 24) · 2.5 s per position · 8 s totalMoveWBBook11
 REVIEW_TAGS tag Book|tag Book
 GRAPH true
 ACC W – · B –
-PGN_SUMMARY 40.8White accuracy100.0Black accuracy4moves ratedMoveWBBest01Book01Inaccuracy10Blunder10
+PGN_SUMMARY 40.5White accuracy100.0Black accuracy4moves ratedStockfish reached depth 23–26 (avg 24) · 1.5 s per position · 8 s totalMoveWBBest01Book01Inaccuracy10Blunder10
 PGN_TAGS tag Inaccuracy|tag Book|tag Blunder|tag Best
-PGN_ACC W 40.8 · B 100.0
+PGN_ACC W 40.5 · B 100.0
 PGN_GRAPH true
 ERRORS []

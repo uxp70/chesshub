@@ -9,8 +9,42 @@ var el=SF.el;
 var VAL={p:100,n:320,b:330,r:500,q:900,k:0};
 var TAGS={Brilliant:'!!',Great:'!',Best:'✓',Excellent:'✓',Good:'·',Book:'📖',Inaccuracy:'?!',Mistake:'?',Miss:'×',Blunder:'??'};
 var BOOK={e4:1,d4:1,Nf3:1,c4:1,g3:1,b3:1,e5:1,c5:1,e6:1,c6:1,d5:1,Nf6:1,Nc6:1,d6:1,g6:1,b6:1,a6:1,h6:1,Be7:1,Bb4:1,Bc5:1,Nd7:1,Be6:1,Bg7:1,'O-O':1,'O-O-O':1};
-var REVIEW_GO='depth 18 movetime 400';
+/* Per-position search budget for Game Review. Previous setting was 'depth 18 movetime 400'. */
+var REVIEW_DEPTH=26;
+var REVIEW_MS=2500;
+var REVIEW_GO='depth '+REVIEW_DEPTH+' movetime '+REVIEW_MS;
 var review=null,graph=null,stopFlag=false,busy=false,originalRun=null;
+function depthStats(r){
+  var d=(r&&r.depths)||[],i,v,min=0,max=0,sum=0,n=0;
+  for(i=0;i<d.length;i++){
+    v=d[i]||0;
+    if(!v){continue;}
+    n++;sum+=v;
+    if(!min||v<min){min=v;}
+    if(v>max){max=v;}
+  }
+  if(!n){return null;}
+  return {min:min,max:max,avg:sum/n,n:n};
+}
+function depthText(r){
+  var s=depthStats(r);
+  if(!s){return 'depth –';}
+  if(s.min===s.max){return 'depth '+s.min;}
+  return 'depth '+s.min+'–'+s.max+' (avg '+s.avg.toFixed(0)+')';
+}
+function msAvg(r){
+  var a=(r&&r.ms)||[],i,sum=0,n=0;
+  for(i=0;i<a.length;i++){if(a[i]>0){sum+=a[i];n++;}}
+  return n?sum/n:0;
+}
+function depthLine(r){
+  var s=depthStats(r),a=msAvg(r),txt;
+  if(!s){return 'Stockfish is searching…';}
+  txt='Stockfish reached '+depthText(r);
+  if(a){txt+=' · '+(a/1000).toFixed(1)+' s per position';}
+  if(r&&r.totalMs){txt+=' · '+(r.totalMs/1000).toFixed(0)+' s total';}
+  return txt;
+}
 function makeGraph(){
   var rs=$('reviewSummary');
   if(!rs||!rs.parentNode){return;}
@@ -18,7 +52,7 @@ function makeGraph(){
   graph.id='sfGraph';
   rs.parentNode.insertBefore(graph,rs.nextSibling);
   var st=document.createElement('style');
-  st.textContent='.sf-graph{background:#100f0e;border:1px solid var(--line);border-radius:10px;padding:6px;margin:8px 0}.sf-graph svg{display:block;width:100%;height:90px}.sf-graph .cap{font-size:11px;color:#a8a29a;margin-top:4px}';
+  st.textContent='.sf-graph{background:#100f0e;border:1px solid var(--line);border-radius:10px;padding:6px;margin:8px 0}.sf-graph svg{display:block;width:100%;height:90px}.sf-graph .cap{font-size:11px;color:#a8a29a;margin-top:4px}.sf-depth{font-size:11px;color:#a8a29a;margin-top:6px;line-height:1.45}';
   document.head.appendChild(st);
 }
 function renderSummary(r){
@@ -36,6 +70,9 @@ function renderSummary(r){
     acc.appendChild(d);
   }
   box.appendChild(acc);
+  var cap=el('div','sf-depth muted',depthLine(r));
+  cap.id='sfDepth';
+  box.appendChild(cap);
   var order=['Brilliant','Great','Best','Excellent','Good','Book','Inaccuracy','Mistake','Miss','Blunder'];
   var tally=el('div','tally');
   var head=el('div','tally-row head');
@@ -133,11 +170,12 @@ function renderReviewAt(p){
   if(lineEl){lineEl.textContent=line?('Stockfish depth '+(line.depth||'?')+' · eval '+SF.evalText({cp:line.cp,mate:line.mate},line.turn)+' · best '+(line.bestSan||'—')+(line.pvSan?' · '+line.pvSan:'')):'No engine data.';}
 }
 function evalPos(fen){
+  var t0=Date.now();
   return SF.search(fen,REVIEW_GO,SF.configureFull).then(function(res){
     var g=new Orig(fen),turn=g.turn(),cp;
     if(res.mate!==null&&typeof res.mate==='number'){cp=res.mate>0?100000:-100000;}
     else{cp=(res.cp===null||typeof res.cp!=='number')?0:res.cp;}
-    return {fen:fen,turn:turn,white:turn==='w'?cp:-cp,cp:res.cp,mate:res.mate,best:res.best,bestSan:SF.uciToSan(fen,res.best),pvSan:SF.pvToSan(fen,res.pv,6),depth:res.depth,nodes:res.nodes};
+    return {fen:fen,turn:turn,white:turn==='w'?cp:-cp,cp:res.cp,mate:res.mate,best:res.best,bestSan:SF.uciToSan(fen,res.best),pvSan:SF.pvToSan(fen,res.pv,6),depth:res.depth,seldepth:res.seldepth,nodes:res.nodes,ms:Date.now()-t0};
   });
 }
 function sacrificeBefore(fen,uci,turn,whiteCp){
@@ -164,7 +202,7 @@ function finishReview(){
     renderSummary(review);
     if(acc){acc.textContent='W '+SF.fmtAcc(SF.avg(review.wAcc))+' · B '+SF.fmtAcc(SF.avg(review.bAcc));}
     renderReviewAt(review.p);
-    if(lineEl){lineEl.textContent='Stockfish review complete · every move rated · click the eval graph';}
+    if(lineEl){lineEl.textContent='Stockfish review complete · '+depthText(review)+' · every move rated';}
   }
 }
 function fallbackReview(){
@@ -187,14 +225,14 @@ function runDeepReview(){
   var runBtn=$('runReviewBtn'),stopBtn=$('stopReviewBtn'),sum=$('reviewSummary'),lineEl=$('engineLine');
   if(runBtn){runBtn.disabled=true;}
   if(stopBtn){stopBtn.classList.remove('hidden');}
-  if(sum){sum.innerHTML='';sum.appendChild(el('div','muted','Stockfish is reviewing every move…'));}
+  if(sum){sum.innerHTML='';sum.appendChild(el('div','muted','Deep review: Stockfish searches every move to depth '+REVIEW_DEPTH+' (up to '+(REVIEW_MS/1000).toFixed(1)+' s per position)…'));}
   if(lineEl){lineEl.textContent='Loading Stockfish…';}
   var tab=$('tabAnalyse');
   if(tab&&$('panelAnalyse')&&$('panelAnalyse').classList.contains('hidden')){tab.click();}
   SF.startEngine().then(async function(){
     var replay=new Orig();
     var first=await evalPos(replay.fen());
-    review={sans:sans,classes:[],lines:[first],evals:[first.white],counts:{w:{},b:{}},wAcc:[],bAcc:[],p:0};
+    review={sans:sans,classes:[],lines:[first],evals:[first.white],counts:{w:{},b:{}},wAcc:[],bAcc:[],p:0,depths:[first.depth||0],ms:[first.ms||0],totalMs:first.ms||0};
     var i,turn,legalBefore,before,mv,after,winBefore,winAfter,drop,side,cls,acc,isBest,isOnly,sac;
     for(i=0;i<sans.length;i++){
       if(stopFlag){break;}
@@ -205,6 +243,9 @@ function runDeepReview(){
       after=await evalPos(replay.fen());
       review.lines[i+1]=after;
       review.evals[i+1]=after.white;
+      review.depths[i+1]=after.depth||0;
+      review.ms[i+1]=after.ms||0;
+      review.totalMs+=(after.ms||0);
       winBefore=SF.winFor(before.white,turn);
       winAfter=SF.winFor(after.white,turn);
       drop=Math.max(0,winBefore-winAfter);
@@ -228,7 +269,7 @@ function runDeepReview(){
       }
       review.classes[i]=cls;
       review.counts[side][cls]=(review.counts[side][cls]||0)+1;
-      if(lineEl){lineEl.textContent='Stockfish: move '+(i+1)+'/'+sans.length+' · depth '+(after.depth||'?')+' · '+cls;}
+      if(lineEl){lineEl.textContent='Stockfish: move '+(i+1)+'/'+sans.length+' · depth '+(after.depth||'?')+' of '+REVIEW_DEPTH+' · '+((after.ms||0)/1000).toFixed(1)+' s · '+cls;}
       renderSummary(review);
       await new Promise(function(r){setTimeout(r,0);});
     }

@@ -14,6 +14,12 @@ var REVIEW_DEPTH=26;
 var REVIEW_MS=2500;
 var REVIEW_GO='depth '+REVIEW_DEPTH+' movetime '+REVIEW_MS;
 var review=null,graph=null,stopFlag=false,busy=false,originalRun=null;
+function tagSpan(t){
+  var s=el('span','tag '+t,TAGS[t]);
+  s.title=t;
+  s.setAttribute('aria-label',t);
+  return s;
+}
 function depthStats(r){
   var d=(r&&r.depths)||[],i,v,min=0,max=0,sum=0,n=0;
   for(i=0;i<d.length;i++){
@@ -139,10 +145,10 @@ function renderMoveList(){
   for(i=0;i<review.sans.length;i+=2){
     li=document.createElement('li');
     li.appendChild(document.createTextNode((i/2+1)+'. '+review.sans[i]));
-    t=review.classes[i];if(t){li.appendChild(el('span','tag '+t,TAGS[t]));}
+    t=review.classes[i];if(t){li.appendChild(tagSpan(t));}
     if(review.sans[i+1]){
       li.appendChild(document.createTextNode('  '+review.sans[i+1]));
-      t=review.classes[i+1];if(t){li.appendChild(el('span','tag '+t,TAGS[t]));}
+      t=review.classes[i+1];if(t){li.appendChild(tagSpan(t));}
     }
     if(review.p>=i+1&&review.p<=i+2){li.classList.add('cur');}
     (function(ply){li.onclick=function(){renderReviewAt(ply);};})(Math.min(i+2,review.sans.length));

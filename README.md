@@ -5,7 +5,7 @@
 Features:
 - 🤖 6 rated bots (300 → 1850), all running locally: **Sprout, Pixel, Mira, Jonah, Zara, Odin**.
 - 👥 Local two-player and 🌐 online friend play through PeerJS (free WebRTC, no account: host creates a six-letter code, friend joins).
-- 🔍 chess.com-style **Game Review**: eval bar, best-move arrow, principal variation, move classifications (Brilliant / Great / Best / Excellent / Good / Inaccuracy / Mistake / Miss / Blunder), tallies per side, per-move accuracy and white/black averages. Keyboard navigation, PGN/FEN import, hint engine. Review and hints are powered by **Stockfish 10** running in a Web Worker; if it cannot start, the built-in engine takes over automatically.
+- 🔍 chess.com-style **Game Review**: eval bar, best-move arrow, principal variation, move classifications (Brilliant / Great / Best / Excellent / Good / Inaccuracy / Mistake / Miss / Blunder), tallies per side, per-move accuracy and white/black averages. Keyboard navigation, PGN/FEN import, hint engine. Review and hints are powered by **Stockfish 19** running in a Web Worker.
 
 ## Run locally
 
@@ -27,16 +27,16 @@ npx serve .
 
 ## Bots and elo
 
-| Bot | Elo | Search depth | Noise | Random blunders |
-|-----|-----|--------------|-------|-----------------|
-| Sprout | 300 | 1 ply | ±250cp | 26% |
-| Pixel | 600 | 1 ply | ±110cp | 15% |
-| Mira | 900 | 2 ply | ±70cp | 9% |
-| Jonah | 1200 | 3 ply + quiescence | ±28cp | 4% |
-| Zara | 1500 | 4 ply + quiescence | ±12cp | 2% |
-| Odin | 1850 | 5 ply + quiescence | ±5cp | 1% |
+| Bot | Elo |
+|-----|-----|
+| Sprout | 300 |
+| Pixel | 600 |
+| Mira | 900 |
+| Jonah | 1200 |
+| Zara | 1500 |
+| Odin | 1850 |
 
-Bots use the same engine as the analyser, with a time budget and an elo-appropriate amount of noise.
+Bots run on the same Stockfish 19 build, limited to their rating with Skill Level / UCI_Elo.
 
 ## Engine
 
@@ -47,23 +47,19 @@ Bots use the same engine as the analyser, with a time budget and an elo-appropri
 
 ## Stockfish
 
-Stockfish 10 is loaded from cdnjs: the single-threaded asm.js build compiled by
-[niklasf/stockfish.js](https://github.com/niklasf/stockfish.js) (GPLv3). A Worker cannot be created
-directly from another origin, so the page wraps the CDN script in a same-origin blob worker
-(`importScripts(...)`) and drives it with UCI over `postMessage`.
+The site runs **Stockfish 19 lite** (NNUE, single-threaded WebAssembly) locally: `stockfish/stockfish-19-lite-single.js`
+and its `.wasm` are served from this repo, started in a Web Worker by `sf-core.js`, and turned into the
+Game Review, hint and eval features by `sf-review.js`.
 
 - Single-threaded on purpose. GitHub Pages cannot send `Cross-Origin-Opener-Policy` /
   `Cross-Origin-Embedder-Policy`, so the `SharedArrayBuffer` (multi-threaded) builds would never load.
-- **Game Review** has a speed selector in the Analyse panel: ⚡ **Fast** (~0.4 s/move, depth 16),
-  ⚖ **Balanced** (~1.2 s/move, depth 20, the default) and 🔍 **Deep** (~2.5 s/move, depth 24).
-  A 40-move game takes roughly 15 s, a minute, or two minutes respectively, and the setting applies
-  from the next position if changed mid-review. It also powers the per-move evals, the best-move
-  arrow and the principal variation.
-- **💡 Hint** is a single search at 8 s (depth cap 30), independent of the review speed.
-- **⏹ Stop** aborts immediately, including while the engine is still loading.
-- The six rated bots and the instant eval bar keep using the built-in engine, so playing stays snappy.
-- If the worker is blocked or fails to start, every feature falls back to the built-in search and the
-  Analyse panel says so.
+- **Game Review** has a speed selector in the Analyse panel: ⚡ **Fast** (depth 18, ~0.4 s/move),
+  ⚖ **Balanced** (depth 22, ~1.2 s/move, the default) and 🔍 **Deep** (depth 26, ~2.5 s/move).
+  A 40-move game takes roughly 15 s, a minute, or two minutes respectively; changing the setting
+  mid-review applies from the next position.
+- **💡 Hint** searches to depth 24 with a 3.5 s limit.
+- **⏹ Stop** ends the running search at once: the review keeps the positions it had already finished
+  and the buttons unlock immediately.
 
 ## Online play
 
@@ -73,7 +69,7 @@ GitHub Pages cannot run a game server, so friend games use PeerJS cloud signalli
 
 - chess.js 0.10.3 (CDN) for rules
 - PeerJS 1.5.4 (CDN) for online play
-- Stockfish 10 (asm.js, GPLv3, loaded from cdnjs) for analysis
+- Stockfish 19 lite (NNUE WASM, GPLv3, vendored under `stockfish/`) for analysis
 - Vanilla JS and CSS for the board, bots and analysis
 
 No tracking, no backend, no API keys.

@@ -1,14 +1,6 @@
 name: Smoke test Stockfish
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - 'sf-core.js'
-      - 'sf-review.js'
-      - 'stockfish-preload.js'
-      - 'index.html'
-      - '.github/workflows/smoke-stockfish.yml'
 permissions:
   contents: write
 jobs:

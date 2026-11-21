@@ -21,7 +21,6 @@ jobs:
           set -euo pipefail
           python3 - <<'PY'
           import pathlib
-
           def patch(path, pairs):
               p = pathlib.Path(path)
               s = p.read_text(encoding='utf-8')
@@ -32,158 +31,40 @@ jobs:
                   s = s.replace(old, new)
               p.write_text(s, encoding='utf-8')
               print('patched', path)
-
           patch('sf-review.js', [
-          ("""/* Per-position search budget for Game Review. Previous setting was 'depth 18 movetime 400'. */
-var REVIEW_DEPTH=26;
-var REVIEW_MS=2500;
-var REVIEW_GO='depth '+REVIEW_DEPTH+' movetime '+REVIEW_MS;""",
-           """/* Per-position search budget for Game Review: the deep search is opt-in. */
-var REVIEW_SPEEDS={
-  fast:{depth:18,ms:400,label:'fast'},
-  balanced:{depth:22,ms:1200,label:'balanced'},
-  deep:{depth:26,ms:2500,label:'deep'}
-};
-var reviewSpeed='balanced';
-function budget(){return REVIEW_SPEEDS[reviewSpeed]||REVIEW_SPEEDS.balanced;}
-function reviewGo(){var s=budget();return 'depth '+s.depth+' movetime '+s.ms;}"""),
-
-          ("""var review=null,graph=null,stopFlag=false,busy=false,originalRun=null;""",
-           """var review=null,graph=null,stopFlag=false,busy=false,originalRun=null,runSeq=0;"""),
-
-          ("""function fallbackReview(){""",
-           """function abortUI(){
-  busy=false;
-  runSeq++;
-  SF.setRunning(false);
-  var runBtn=$('runReviewBtn'),stopBtn=$('stopReviewBtn'),t=$('engineLine');
-  if(runBtn){runBtn.disabled=false;}
-  if(stopBtn){stopBtn.classList.add('hidden');}
-  if(t){t.textContent='Review stopped.';}
-}
-function fallbackReview(){"""),
-
-          ("""  return SF.search(fen,REVIEW_GO,SF.configureFull).then(function(res){""",
-           """  return SF.search(fen,reviewGo(),SF.configureFull).then(function(res){"""),
-
-          ("""  if(sum){sum.innerHTML='';sum.appendChild(el('div','muted','Deep review: Stockfish searches every move to depth '+REVIEW_DEPTH+' (up to '+(REVIEW_MS/1000).toFixed(1)+' s per position)…'));}""",
-           """  var b0=budget();
-  if(sum){sum.innerHTML='';sum.appendChild(el('div','muted','Review ('+b0.label+'): Stockfish searches every move up to depth '+b0.depth+' ('+(b0.ms/1000).toFixed(1)+' s per position max)…'));}"""),
-
-          ("""  busy=true;
-  SF.setRunning(true);""",
-           """  busy=true;
-  var myRun=++runSeq;
-  SF.setRunning(true);"""),
-
-          ("""  SF.startEngine().then(async function(){
-    var replay=new Orig();""",
-           """  SF.startEngine().then(async function(){
-    if(myRun!==runSeq){return;}
-    if(lineEl){lineEl.textContent='Stockfish: searching position 1/'+(sans.length+1)+'…';}
-    var replay=new Orig();"""),
-
-          ("""    var first=await evalPos(replay.fen());
-    review={""",
-           """    var first=await evalPos(replay.fen());
-    if(stopFlag){if(lineEl){lineEl.textContent='Review stopped.';}finishReview();return;}
-    review={"""),
-
-          ("""      after=await evalPos(replay.fen());
-      review.lines[i+1]=after;""",
-           """      after=await evalPos(replay.fen());
-      if(myRun!==runSeq){return;}
-      if(stopFlag){break;}
-      review.lines[i+1]=after;"""),
-
-          ("""      if(lineEl){lineEl.textContent='Stockfish: move '+(i+1)+'/'+sans.length+' · depth '+(after.depth||'?')+' of '+REVIEW_DEPTH+' · '+((after.ms||0)/1000).toFixed(1)+' s · '+cls;}""",
-           """      if(lineEl){lineEl.textContent='Stockfish: move '+(i+1)+'/'+sans.length+' · depth '+(after.depth||'?')+' of '+budget().depth+' · '+((after.ms||0)/1000).toFixed(1)+' s · '+cls;}"""),
-
-          ("""  }).catch(function(e){
-    busy=false;""",
-           """  }).catch(function(e){
-    if(myRun!==runSeq){return;}
-    busy=false;"""),
-
-          ("""function init(){
-  makeGraph();
-  var rb=$('runReviewBtn'),sb=$('stopReviewBtn'),ab=$('analyseBtn');""",
-           """function init(){
-  makeGraph();
-  var speedBtns=document.querySelectorAll('#speedSeg button');
-  function paintSpeed(){
-    for(var k=0;k<speedBtns.length;k++){
-      var btn=speedBtns[k];
-      if(btn.dataset.speed===reviewSpeed){btn.classList.add('active');}else{btn.classList.remove('active');}
-    }
-  }
-  function wireSpeed(i){
-    var btn=speedBtns[i];
-    if(!btn){return;}
-    btn.addEventListener('click',function(){
-      reviewSpeed=btn.dataset.speed||'balanced';
-      paintSpeed();
-      var l=$('engineLine');
-      if(l&&!busy){var s=budget();l.textContent='Review speed: '+s.label+' · up to depth '+s.depth+' · '+(s.ms/1000).toFixed(1)+' s per position';}
-    });
-  }
-  for(var wi=0;wi<speedBtns.length;wi++){wireSpeed(wi);}
-  paintSpeed();
-  var rb=$('runReviewBtn'),sb=$('stopReviewBtn'),ab=$('analyseBtn');"""),
-
-          ("""  if(sb){sb.onclick=null;sb.addEventListener('click',function(){stopFlag=true;if(SF.stop){SF.stop();}});}""",
-           """  if(sb){sb.onclick=null;sb.addEventListener('click',function(){
-    stopFlag=true;
-    if(SF.stop){SF.stop();}
-    if(busy){abortUI();}
-  });}"""),
+          ("/* Per-position search budget for Game Review. Previous setting was 'depth 18 movetime 400'. */\nvar REVIEW_DEPTH=26;\nvar REVIEW_MS=2500;\nvar REVIEW_GO='depth '+REVIEW_DEPTH+' movetime '+REVIEW_MS;",
+           "/* Per-position search budget for Game Review: the deep search is opt-in. */\nvar REVIEW_SPEEDS={\n  fast:{depth:18,ms:400,label:'fast'},\n  balanced:{depth:22,ms:1200,label:'balanced'},\n  deep:{depth:26,ms:2500,label:'deep'}\n};\nvar reviewSpeed='balanced';\nfunction budget(){return REVIEW_SPEEDS[reviewSpeed]||REVIEW_SPEEDS.balanced;}\nfunction reviewGo(){var s=budget();return 'depth '+s.depth+' movetime '+s.ms;}"),
+          ("var review=null,graph=null,stopFlag=false,busy=false,originalRun=null;",
+           "var review=null,graph=null,stopFlag=false,busy=false,originalRun=null,runSeq=0;"),
+          ("function fallbackReview(){",
+           "function abortUI(){\n  busy=false;\n  runSeq++;\n  SF.setRunning(false);\n  var runBtn=$('runReviewBtn'),stopBtn=$('stopReviewBtn'),t=$('engineLine');\n  if(runBtn){runBtn.disabled=false;}\n  if(stopBtn){stopBtn.classList.add('hidden');}\n  if(t){t.textContent='Review stopped.';}\n}\nfunction fallbackReview(){"),
+          ("SF.search(fen,REVIEW_GO,SF.configureFull)",
+           "SF.search(fen,reviewGo(),SF.configureFull)"),
+          ("if(sum){sum.innerHTML='';sum.appendChild(el('div','muted','Deep review: Stockfish searches every move to depth '+REVIEW_DEPTH+' (up to '+(REVIEW_MS/1000).toFixed(1)+' s per position)",
+           "var b0=budget();\n  if(sum){sum.innerHTML='';sum.appendChild(el('div','muted','Review ('+b0.label+'): Stockfish searches every move up to depth '+b0.depth+' ('+(b0.ms/1000).toFixed(1)+' s per position max)"),
+          ("  busy=true;\n  SF.setRunning(true);",
+           "  busy=true;\n  var myRun=++runSeq;\n  SF.setRunning(true);"),
+          ("SF.startEngine().then(async function(){\n    var replay=new Orig();",
+           "SF.startEngine().then(async function(){\n    if(myRun!==runSeq){return;}\n    if(lineEl){lineEl.textContent='Stockfish: searching position 1/'+(sans.length+1)+'…';}\n    var replay=new Orig();"),
+          ("var first=await evalPos(replay.fen());\n    review={",
+           "var first=await evalPos(replay.fen());\n    if(stopFlag){if(lineEl){lineEl.textContent='Review stopped.';}finishReview();return;}\n    review={"),
+          ("after=await evalPos(replay.fen());\n      review.lines[i+1]=after;",
+           "after=await evalPos(replay.fen());\n      if(myRun!==runSeq){return;}\n      if(stopFlag){break;}\n      review.lines[i+1]=after;"),
+          ("' of '+REVIEW_DEPTH+' · '",
+           "' of '+budget().depth+' · '"),
+          ("}).catch(function(e){\n    busy=false;",
+           "}).catch(function(e){\n    if(myRun!==runSeq){return;}\n    busy=false;"),
+          ("function init(){\n  makeGraph();\n  var rb=$('runReviewBtn'),sb=$('stopReviewBtn'),ab=$('analyseBtn');",
+           "function init(){\n  makeGraph();\n  var speedBtns=document.querySelectorAll('#speedSeg button');\n  function paintSpeed(){\n    for(var k=0;k<speedBtns.length;k++){\n      var btn=speedBtns[k];\n      if(btn.dataset.speed===reviewSpeed){btn.classList.add('active');}else{btn.classList.remove('active');}\n    }\n  }\n  function wireSpeed(i){\n    var btn=speedBtns[i];\n    if(!btn){return;}\n    btn.addEventListener('click',function(){\n      reviewSpeed=btn.dataset.speed||'balanced';\n      paintSpeed();\n      var l=$('engineLine');\n      if(l&&!busy){var s=budget();l.textContent='Review speed: '+s.label+' · up to depth '+s.depth+' · '+(s.ms/1000).toFixed(1)+' s per position';}\n    });\n  }\n  for(var wi=0;wi<speedBtns.length;wi++){wireSpeed(wi);}\n  paintSpeed();\n  var rb=$('runReviewBtn'),sb=$('stopReviewBtn'),ab=$('analyseBtn');"),
+          ("if(sb){sb.onclick=null;sb.addEventListener('click',function(){stopFlag=true;if(SF.stop){SF.stop();}});}",
+           "if(sb){sb.onclick=null;sb.addEventListener('click',function(){\n    stopFlag=true;\n    if(SF.stop){SF.stop();}\n    if(busy){abortUI();}\n  });}"),
           ])
-
           patch('index.html', [
-          ("""      <div class='muted' style='margin:6px 0'>Stockfish 19 · deep search to depth 26 · every move rated · accuracy + eval graph</div>""",
-           """      <div class='muted' style='margin:6px 0'>Stockfish 19 · every move rated · accuracy + eval graph</div>
-      <label class='lbl'>Review speed</label>
-      <div class='seg' id='speedSeg'>
-        <button data-speed='fast' title='~0.4 s per move'>⚡ Fast</button>
-        <button data-speed='balanced' class='active' title='~1.2 s per move'>⚖ Balanced</button>
-        <button data-speed='deep' title='~2.5 s per move'>🔍 Deep</button>
-      </div>"""),
-
-          ("""        <li><b>Analysis:</b> hints search to depth 24; Game Review searches every move to depth 26 (2.5 s per position, slower on long games) and shows the depth it actually reached</li>""",
-           """        <li><b>Analysis:</b> hints search to depth 24; Game Review searches every move and shows the depth it reached — pick ⚡ Fast, ⚖ Balanced (default) or 🔍 Deep in the Analyse panel</li>"""),
+          ("      <div class='muted' style='margin:6px 0'>Stockfish 19 · deep search to depth 26 · every move rated · accuracy + eval graph</div>",
+           "      <div class='muted' style='margin:6px 0'>Stockfish 19 · every move rated · accuracy + eval graph</div>\n      <label class='lbl'>Review speed</label>\n      <div class='seg' id='speedSeg'>\n        <button data-speed='fast' title='~0.4 s per move'>⚡ Fast</button>\n        <button data-speed='balanced' class='active' title='~1.2 s per move'>⚖ Balanced</button>\n        <button data-speed='deep' title='~2.5 s per move'>🔍 Deep</button>\n      </div>"),
+          ("        <li><b>Analysis:</b> hints search to depth 24; Game Review searches every move to depth 26 (2.5 s per position, slower on long games) and shows the depth it actually reached</li>",
+           "        <li><b>Analysis:</b> hints search to depth 24; Game Review searches every move and shows the depth it reached — pick ⚡ Fast, ⚖ Balanced (default) or 🔍 Deep in the Analyse panel</li>"),
           ])
-
-          patch('README.md', [
-          ("""Review and hints are powered by **Stockfish 10** running in a Web Worker; if it cannot start, the built-in engine takes over automatically.""",
-           """Review and hints are powered by **Stockfish 19** running in a Web Worker."""),
-
-          ("""- Stockfish 10 (asm.js, GPLv3, loaded from cdnjs) for analysis""",
-           """- Stockfish 19 lite (NNUE WASM, GPLv3, vendored under `stockfish/`) for analysis"""),
-          ])
-
-          p = pathlib.Path('README.md')
-          s = p.read_text(encoding='utf-8')
-          a = s.index('## Stockfish')
-          b = s.index('## Online play', a)
-          new = """## Stockfish
-
-The site runs **Stockfish 19 lite** (NNUE, single-threaded WebAssembly) locally: `stockfish/stockfish-19-lite-single.js`
-and its `.wasm` are served from this repo, started in a Web Worker by `sf-core.js`, and turned into the
-Game Review, hint and eval features by `sf-review.js`.
-
-- Single-threaded on purpose. GitHub Pages cannot send `Cross-Origin-Opener-Policy` /
-  `Cross-Origin-Embedder-Policy`, so the `SharedArrayBuffer` (multi-threaded) builds would never load.
-- **Game Review** has a speed selector in the Analyse panel: ⚡ **Fast** (depth 18, ~0.4 s/move),
-  ⚖ **Balanced** (depth 22, ~1.2 s/move, the default) and 🔍 **Deep** (depth 26, ~2.5 s/move).
-  A 40-move game takes roughly 15 s, a minute, or two minutes respectively; changing the setting
-  mid-review applies from the next position.
-- **💡 Hint** searches to depth 24 with a 3.5 s limit.
-- **⏹ Stop** sends UCI `stop`, so the running search ends at once and the review keeps the positions
-  it had already finished.
-
-"""
-          p.write_text(s[:a] + new + s[b:], encoding='utf-8')
-          print('patched README.md')
           PY
       - name: Commit
         run: |

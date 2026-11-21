@@ -395,10 +395,11 @@ function sfGo(fen,opt){
   return p;
 }
 function sfAbort(){const job=SF.cur;if(!job)return;job.aborted=true;sfSend('stop');}
-function sfWaitReady(ms){
+function sfWaitReady(ms,cancelled){
   return new Promise(resolve=>{
     const t0=performance.now();
     (function poll(){
+      if(cancelled&&cancelled())return resolve(false);
       if(SF.ready)return resolve(true);
       if(SF.dead)return resolve(false);
       if(performance.now()-t0>=ms)return resolve(false);
@@ -412,7 +413,10 @@ function sfWaitReady(ms){
 async function engineBest(g,opt){
   opt=opt||{};
   if(!SF.started)sfStart();
-  if(!SF.dead&&!SF.ready)await sfWaitReady(opt.wait||15000);
+  if(!SF.dead&&!SF.ready){
+    await sfWaitReady(opt.wait||15000,opt.cancelled);
+    if(opt.cancelled&&opt.cancelled())return null;
+  }
   if(SF.ready){
     const r=await sfGo(g.fen(),{movetime:opt.movetime||300,depth:opt.depth});
     if(r&&r.aborted)return null;
@@ -708,6 +712,15 @@ function summaryHtml(accW,accB,counts,done,total){
 }
 function average(a){return a.length?a.reduce((x,y)=>x+y,0)/a.length:null;}
 
+/* Review time budgets: the slow, deep search is opt-in. */
+const REVIEW_SPEEDS={
+  fast:{movetime:400,depth:16,label:'fast',per:'~0.4 s per move'},
+  balanced:{movetime:1200,depth:20,label:'balanced',per:'~1.2 s per move'},
+  deep:{movetime:2500,depth:24,label:'deep',per:'~2.5 s per move'}
+};
+let reviewSpeed='balanced';
+function reviewBudget(){return REVIEW_SPEEDS[reviewSpeed]||REVIEW_SPEEDS.balanced;}
+
 let reviewing=false;
 async function runReview(){
   if(reviewing)return;
@@ -721,7 +734,8 @@ async function runReview(){
   const g=new Chess();
   const classes=[],lines=[],evalsByPly=[],wAcc=[],bAcc=[];
   const counts={w:{},b:{}};
-  let cur=await engineBest(g,{movetime:2500,depth:24,localMs:300});
+  const sp=reviewBudget();
+  let cur=await engineBest(g,{movetime:sp.movetime,depth:sp.depth,localMs:300,cancelled:()=>!reviewing});
   lines[0]=cur;
   evalsByPly[0]=cur?cur.score:evaluate(g);
   try{
@@ -733,7 +747,8 @@ async function runReview(){
     const cpBefore=typeof before.score==='number'?before.score:evaluate(g);
     const sac=sacrificeLikely(g,before.move,turn,cpBefore);
     const mv=g.move(sans[i]);
-    const next=await engineBest(g,{movetime:2500,depth:24,localMs:300});
+    const next=await engineBest(g,{movetime:sp.movetime,depth:sp.depth,localMs:300,cancelled:()=>!reviewing});
+    if(!reviewing)break;
     lines[i+1]=next;
     const cpAfter=next&&typeof next.score==='number'?next.score:evaluate(g);
     evalsByPly[i+1]=cpAfter;
@@ -784,7 +799,7 @@ async function runReview(){
   $('accLine').textContent=(aw===null&&ab===null)?''
     :('W '+(aw===null?'–':aw.toFixed(1))+' · B '+(ab===null?'–':ab.toFixed(1)));
   $('engineLine').textContent='Review complete'+(used<sans.length?' (stopped early)':'')+
-    ' · engine: '+(SF.ready?SF.name:'built-in')+' · step with the arrows · green arrow = best move';
+    ' · engine: '+(SF.ready?SF.name:'built-in')+' ('+sp.label+') · step with the arrows · green arrow = best move';
   render();
 }
 
@@ -1011,6 +1026,11 @@ $('hintBtn').onclick=()=>{
   },30);
 };
 $('analyseBtn').onclick=()=>{switchTab('Analyse');runReview();};
+document.querySelectorAll('#speedSeg button').forEach(b=>b.onclick=()=>{
+  reviewSpeed=b.dataset.speed||'balanced';
+  document.querySelectorAll('#speedSeg button').forEach(x=>x.classList.toggle('active',x===b));
+  if(!reviewing)$('engineLine').textContent='Review speed: '+reviewBudget().label+' ('+reviewBudget().per+')';
+});
 $('runReviewBtn').onclick=runReview;
 $('stopReviewBtn').onclick=()=>{reviewing=false;sfAbort();};
 $('showBestChk').onchange=e=>{showBest=e.target.checked;render();};
